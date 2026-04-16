@@ -31,70 +31,70 @@
 - [x] Pripremljen CLAUDE.md i docs/progress.md
 
 ### Dashboard (statični)
-- [ ] Bottom navigation bar (Home, Stats placeholder, Shop placeholder, Inv placeholder, Me placeholder)
-- [ ] Dashboard layout: lik avatar (emoji 🧙), ime, Level 1, XP bar (0/50)
-- [ ] Streak display (🔥 0)
-- [ ] Coins display (💰 0)
-- [ ] "Start Focus" gumb (navigacija na setup screen)
-- [ ] Tjedni challenge placeholder ("Fokusiraj 100 min ovaj tjedan")
+- [x] Bottom navigation bar (Home, Stats placeholder, Shop placeholder, Inv placeholder, Me placeholder)
+- [x] Dashboard layout: lik avatar (emoji 🧙), ime, Level 1, XP bar (0/50)
+- [x] Streak display (🔥 0)
+- [x] Coins display (💰 0)
+- [x] "Start Focus" gumb (navigacija na setup screen)
+- [x] Tjedni challenge placeholder ("Fokusiraj 100 min ovaj tjedan")
 
 ### Setup Screen
-- [ ] Back gumb (nazad na dashboard)
-- [ ] Slobodan tekst input za predmet
-- [ ] Recent dropdown (zadnjih 5 iz localStorage)
-- [ ] Ako prazno → auto "Opći fokus"
-- [ ] 4 preset gumba (15/25/45/90 min) — jedan aktivan
-- [ ] 4 scenarij gumba (⚔️🌱🚀🤡) — vizualno, bez efekta na quest još
-- [ ] "Start Focus" gumb
+- [x] Back gumb (nazad na dashboard)
+- [x] Slobodan tekst input za predmet
+- [x] Recent dropdown (zadnjih 5 iz localStorage)
+- [x] Ako prazno → auto "Opći fokus"
+- [x] 4 preset gumba (15/25/45/90 min) — jedan aktivan
+- [x] 4 scenarij gumba (⚔️🌱🚀🤡) — vizualno, bez efekta na quest još
+- [x] "Start Focus" gumb
 
 ### Timer Screen
-- [ ] Veliki timer countdown (MM:SS)
-- [ ] Quest title placeholder ("Fokus sesija")
-- [ ] Lik emoji (🧙)
-- [ ] Pause / Resume gumb
-- [ ] Stop gumb (potvrda "Jesi siguran?")
+- [x] Veliki timer countdown (MM:SS)
+- [x] Quest title placeholder ("Fokus sesija")
+- [x] Lik emoji (🧙)
+- [x] Pause / Resume gumb
+- [x] Stop gumb (potvrda "Jesi siguran?")
 - [ ] Timer zvuk/vibra kad završi (browser API)
 
 ### Timer Logika
-- [ ] useState za remaining seconds
-- [ ] useEffect s setInterval za countdown
-- [ ] Start → countdown krene
-- [ ] Pause → countdown stane
-- [ ] Resume → countdown nastavlja
-- [ ] Stop → potvrda → nazad na dashboard (25% XP)
-- [ ] Timer = 0 → completion trigger
+- [x] useState za remaining seconds
+- [x] useEffect s setInterval za countdown
+- [x] Start → countdown krene
+- [x] Pause → countdown stane
+- [x] Resume → countdown nastavlja
+- [x] Stop → potvrda → nazad na dashboard (25% XP)
+- [x] Timer = 0 → completion trigger
 
 ### Celebration Screen
-- [ ] "Sesija završena!" tekst
-- [ ] +XP earned (animirani counter)
-- [ ] +Coins earned
-- [ ] XP bar progress update
-- [ ] Level up detekcija (ako XP prelazi threshold)
-- [ ] Level up modal ("Level Up! 🎉")
-- [ ] "Želiš break?" [Da (X min)] [Skip]
-- [ ] Break timer (ako Da) → nazad na dashboard
-- [ ] Skip → nazad na dashboard
+- [x] "Sesija završena!" tekst
+- [x] +XP earned (animirani counter)
+- [x] +Coins earned
+- [x] XP bar progress update
+- [x] Level up detekcija (ako XP prelazi threshold)
+- [x] Level up modal ("Level Up! 🎉")
+- [x] "Želiš break?" [Da (X min)] [Skip]
+- [x] Break timer (ako Da) → nazad na dashboard
+- [x] Skip → nazad na dashboard
 
 ### XP/Level sustav (localStorage)
-- [ ] localStorage helper: save/load user data
-- [ ] XP formula: `xp = duration * 2`
-- [ ] Coins formula: `coins = Math.floor(xp * 0.1)`
-- [ ] Level formula: `level<10 ? 50*level^1.3 : 100*level^1.8`
-- [ ] XP bar progress (current XP / next level XP)
-- [ ] Streak tracking (last_session_date, current_streak)
+- [x] localStorage helper: save/load user data
+- [x] XP formula: `xp = duration * 2`
+- [x] Coins formula: `coins = Math.floor(xp * 0.1)`
+- [x] Level formula: `level<10 ? 50*level^1.3 : 100*level^1.8`
+- [x] XP bar progress (current XP / next level XP)
+- [x] Streak tracking (last_session_date, current_streak)
 
 ### Polish
-- [ ] Dark mode kao default
+- [x] Dark mode kao default
 - [ ] Light mode toggle u settings (basic)
-- [ ] Responsive na mobitelu (test na Chrome DevTools)
-- [ ] Page title: "FocusForge"
-- [ ] Favicon (emoji ili basic ikona)
+- [x] Responsive na mobitelu (test na Chrome DevTools)
+- [x] Page title: "FocusForge"
+- [x] Favicon (emoji ili basic ikona)
 
 ### DONE CRITERIA za v0.1
 - [ ] Svi checkboxevi gore su [x]
-- [ ] Live URL radi bez crasheva
-- [ ] Možeš proći: start → timer → XP → level up
-- [ ] Otvoriš na mobitelu i izgleda ok
+- [x] Live URL radi bez crasheva
+- [x] Možeš proći: start → timer → XP → level up
+- [x] Otvoriš na mobitelu i izgleda ok
 - [ ] Pokazao si 5 frendova
 
 ---
@@ -296,6 +296,15 @@
 ---
 
 ## 📝 Changelog
+
+### 2026-04-17
+- ✅ Dashboard UI (hero card, XP bar, bottom nav)
+- ✅ Setup screen (subject input, duration, scenarij)
+- ✅ Timer screen (countdown, pause/resume, stop modal)
+- ✅ Celebration screen (animirani XP counter, level up modal, break timer)
+- ✅ localStorage sustav (XP, coins, level, streak, recent subjects)
+- ✅ Polish (dark mode, favicon, page title, mobile responsive)
+- ✅ Vercel deploy potvrđen
 
 ### 2026-04-16
 - ✅ v0.1 setup gotov (Node, Git, VS Code, GitHub, Vercel, Supabase)
