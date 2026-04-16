@@ -1,6 +1,7 @@
 # CLAUDE.md — Instrukcije za Claude Code
 
 > Ovaj fajl Claude Code čita automatski pri startu. Sadrži sve što treba znati o projektu, autoru i načinu rada.
+> **Verzija:** 2.0 (ažurirano nakon kompletnog vision sessionsa)
 
 ---
 
@@ -25,7 +26,11 @@
 - 🎨 Vizualni learner — voli mockupe, dijagrame, ASCII art, blok dijagrame
 - 🧠 Voli **razumjeti kako stvari rade**, ne samo copy-paste
 - ⚡ Voli brz vidljiv napredak (motivacija)
-- ⏰ Realno raspoloživo: 2–5h tjedno
+- ⏰ Realno raspoloživo: varira (2-8h/tj škola, 10-20h/tj ljeto)
+
+**Važni datumi:**
+- Svibanj/Lipanj 2026: MATURA — app je sekundaran!
+- Srpanj/Kolovoz 2026: Ljeto = turbo mode (10-20h/tj)
 
 ---
 
@@ -33,35 +38,39 @@
 
 ### JEZIK
 - **Sva komunikacija na HRVATSKOM jeziku**
-- Tehnički termini mogu ostati na engleskom (component, state, props, hook, deploy...)
-- Komentari u kodu: **na engleskom** (industry standard, lakše dijeliti kasnije)
+- Tehnički termini na engleskom ok (component, state, props, hook, deploy...)
+- Komentari u kodu: **na engleskom**
 
 ### NAČIN OBJAŠNJAVANJA
-- Prije nego napišeš kod koji koristi novi koncept → **objasni koncept prvo**
+- Objasni novi koncept PRIJE nego napišeš kod koji ga koristi
 - Koristi vizualne prikaze: tablice, ASCII dijagrame, blok prikaze
-- Usporedi novi koncept s nečim što David zna (najčešće C# ili SQL)
-- Komentiraj svaki red novog koda prvi put kad ga uvodiš
+- Usporedi s C# ili SQL kad je moguće
+- Komentiraj svaki red novog koda prvi put
 
 ### KORACI
 - **Mali koraci, vidljiv napredak.** Bolje 1 stvar koja radi nego 5 polovičnih.
-- Nakon svake promjene reci **"sad otvori localhost:3000 i provjeri"**
-- Ako nešto ne radi → traži točan error, ne pretpostavljaj
+- Nakon svake promjene: "sad otvori localhost:3000 i provjeri"
+- Ako nešto ne radi → traži error, ne pretpostavljaj
 
 ### PITAJ KAD JE NEJASNO
-- Ako postoji više razumnih opcija (npr. "želiš dark ili light mode?") → **pitaj kratko**, ne pretpostavljaj
-- Koristi 2–4 opcije, ne open-ended pitanja
+- 2–4 opcije, ne open-ended pitanja
+- Ako imaš concern o odluci → reci iskreno (David prima feedback)
 
 ---
 
 ## 🎯 O projektu (FocusForge)
 
-**Što je:** Pomodoro produktivna aplikacija s RPG mehanikom (XP, coins, loot) i AI-generiranim questovima vezanim uz stvarno učenje korisnika.
+**Što je:** Pomodoro RPG app s AI-generiranim questovima vezanim uz stvarno učenje.
 
-**USP:** Jedina Pomodoro RPG app gdje AI generira priču na temelju onoga što korisnik stvarno uči.
+**USP:** Jedina Pomodoro RPG app gdje AI generira priču na temelju predmeta koji korisnik uči.
 
-**Ciljana publika (faza 1):** Hrvatski srednjoškolci i studenti (15–25), Zagreb i veći gradovi.
+**Brand filozofija:**
+- Privacy-first (nema stranaca, nema DM-a, nema javnih profila)
+- Bez pritiska (blagi streak, NEMA push notifikacija)
+- App te čeka, ne zove te
 
-**📖 PUNA SPECIFIKACIJA:** Vidi `focusforge-spec.md` — sve mehanike, database schema, roadmap, USP detalji.
+**📖 PUNA VIZIJA:** Vidi `focusforge-vision.md` — SVE odluke su tu.
+**📖 ROADMAP:** Vidi `focusforge-roadmap.md` — verzije + checkboxevi.
 
 ---
 
@@ -70,45 +79,34 @@
 ```
 Frontend:   Next.js 15 (App Router) + TypeScript + Tailwind CSS
 Backend:    Supabase (PostgreSQL + Auth + Storage)
-AI:         Claude API (Haiku za questove, Sonnet za premium)
+AI:         Claude API (Haiku za questove)
 Hosting:    Vercel (auto-deploy iz GitHub-a)
 Repo:       https://github.com/DavidMerkas/focusforge
 Live:       https://focusforge-gules.vercel.app
 ```
 
-**Već instalirano u projektu:**
-- TypeScript ✅
-- Tailwind CSS v4 ✅
-- ESLint ✅
-- App Router ✅
-- Turbopack ✅
-- src/ folder struktura ✅
+**Već instalirano:**
+- TypeScript ✅, Tailwind CSS v4 ✅, ESLint ✅
+- App Router ✅, Turbopack ✅, src/ folder ✅
 
 **Još NIJE instalirano (dodaj kad zatreba):**
-- shadcn/ui (komponente)
-- Recharts (grafovi)
-- Framer Motion (animacije)
-- Supabase client
-- Anthropic SDK
+- shadcn/ui, Recharts, Framer Motion
+- Supabase client, Anthropic SDK
 
 ---
 
-## 📍 Gdje smo SAD (v0.1 status)
+## 📍 Trenutni status
+
+**Trenutna verzija:** v0.1 (u tijeku)
 
 ✅ **Završeno:**
-- Setup dev okruženja (Node, Git, VS Code)
-- Next.js projekt kreiran s svim opcijama
-- GitHub repo + Vercel auto-deploy pipeline
-- Supabase projekt kreiran (regija: Frankfurt, free tier)
-- Welcome page zamijenjen s "FocusForge 🧙" placeholderom (`src/app/page.tsx`)
+- Dev okruženje setup
+- Next.js projekt + GitHub + Vercel pipeline
+- Supabase projekt kreiran (Frankfurt)
+- Welcome page → "FocusForge 🧙" placeholder
 
-🔜 **Sljedeći koraci (vidi `docs/progress.md` za detalje):**
-1. Home screen UI (lik placeholder + timer display + preset gumbi) — STATIČKI
-2. Timer logika (countdown, start/pause/reset)
-3. XP sustav (lokalna pohrana u localStorage za sad)
-4. Level-up animacija (Framer Motion)
-
-⏳ **Ostavljeno za v0.2:** Supabase auth, baza, spremanje sesija
+🔜 **Sljedeći korak:**
+Pogledaj `focusforge-roadmap.md` → sekcija v0.1 za točan checklist.
 
 ---
 
@@ -118,42 +116,92 @@ Live:       https://focusforge-gules.vercel.app
 focusforge/
 ├── src/
 │   └── app/
-│       ├── page.tsx           ← home screen (mijenjamo sad)
+│       ├── page.tsx           ← home/dashboard (mijenjamo sad)
 │       ├── layout.tsx         ← root layout, fonts, metadata
 │       └── globals.css        ← Tailwind + global stilovi
-├── public/                    ← statički fajlovi (slike, ikone)
+├── public/                    ← statički fajlovi
 ├── docs/
-│   └── progress.md            ← detaljni progress tracker
-├── README.md                  ← projekt overview
-├── focusforge-spec.md         ← FULL specifikacija
-├── CLAUDE.md                  ← OVAJ FAJL (instrukcije)
+│   └── progress.md            ← (zamijenjen s focusforge-roadmap.md)
+├── focusforge-vision.md       ← KOMPLETNA VIZIJA (SVE odluke)
+├── focusforge-roadmap.md      ← ROADMAP PO VERZIJAMA (checkboxevi)
+├── focusforge-spec.md         ← stari spec (reference only)
+├── README.md
+├── CLAUDE.md                  ← OVAJ FAJL
 ├── AGENTS.md                  ← Next.js best practices (auto)
-└── package.json               ← dependencies
+└── package.json
 ```
 
 ---
 
 ## 🎨 Design smjernice
 
-**Vibe:** Dark mode, gameri, RPG feel ali clean
-**Boje (početne, mogu se mijenjati):**
-- Pozadina: `bg-slate-900` (tamno siva)
+**Vibe:** Dark mode default, RPG feel ali clean. Light mode dostupan.
+
+**Dark mode boje:**
+- Pozadina: `bg-slate-900`
+- Sekundarna: `bg-slate-800`
 - Akcent: `bg-purple-600` (RPG magija)
 - Tekst: `text-white` / `text-slate-300`
 - Uspjeh: `text-green-400`
 - Upozorenje: `text-amber-400`
+- Rarity: Common `text-gray-400`, Rare `text-blue-400`, Epic `text-purple-400`, Legendary `text-yellow-400`
 
-**Tipografija:** Default Next.js (Geist) je ok za sad
+**Light mode:** Inverzne vrijednosti, definiraj kad dođeš do toga.
+
+**Tipografija:** Default Next.js (Geist)
+
+**Layout:**
+- Mobile-first (portrait, touch-first)
+- Desktop: centriran, max-width ~480px
+- Bottom nav: 🏠📊🛒🎒👤
+
+---
+
+## 🎮 Ključne mehanike (quick reference)
+
+### XP
+- 15min=30XP, 25min=50XP, 45min=90XP, 90min=180XP
+- Streak multiplier: 3+d ×1.5, 7+d ×1.75, 30+d ×2.0
+
+### Coins
+- 10% od XP-a
+
+### Level
+- level<10: `50 × level^1.3`
+- level≥10: `100 × level^1.8`
+- Max: 100 (soft cap)
+
+### Perk slotovi
+- Unlock svaki 10. level (lvl 10, 20, 30...)
+- Dodatni slotovi kupljivi u shopu (300, 600 coinsa)
+
+### Loot
+- 10-15% drop rate po sesiji
+- Common 70%, Rare 20%, Epic 8%, Legendary 2%
+- Tematski po SCENARIJU (ne predmetu)
+
+### Potion
+- Max 2 po sesiji, biraj prije starta
+- Streak Freeze = izuzetak (instant)
+
+### 4 Scenarija
+- ⚔️ Dungeon (RPG fantasy, dramatic ton)
+- 🌱 Vrt (Cozy, poetično, smireno)
+- 🚀 Svemir (Sci-fi napetost)
+- 🤡 Chaos (Meme-speak, Gen Z)
 
 ---
 
 ## ⚠️ Stvari koje NE radi bez pitanja
 
-- **Ne instaliraj nove pakete** bez objašnjenja zašto su potrebni
-- **Ne mijenjaj dependencies** u `package.json` ručno
-- **Ne pravi velike refactore** — uvijek mali koraci
-- **Ne koristi React Compiler** (eksperimentalno, ostavili smo isključeno)
-- **Ne dodaj autentifikaciju ni bazu** dok ne završimo v0.1 lokalno
+- **Ne instaliraj pakete** bez objašnjenja zašto
+- **Ne mijenjaj package.json** ručno
+- **Ne pravi velike refactore** — mali koraci
+- **Ne koristi React Compiler** (isključeno)
+- **Ne dodaj auth/bazu** dok ne završimo v0.1
+- **Ne dodaj push notifikacije** (NEMA ih, dizajnerska odluka)
+- **Ne dodaj guildove** (zamijenjeni Friends sustavom)
+- **Ne dodaj chat/DM** (safety odluka)
 
 ---
 
@@ -161,20 +209,21 @@ focusforge/
 
 1. David kaže što želi
 2. Ti objasniš pristup (kratko, vizualno)
-3. Ti napišeš kod (s komentarima ako je novi koncept)
-4. David spremi i provjeri u browseru
+3. Ti napišeš kod (komentari ako je novi koncept)
+4. David spremi i provjeri
 5. Ako radi → commit + push
-6. Update `docs/progress.md` s novom završenom stavkom
+6. Update `focusforge-roadmap.md` (checkbox → [x])
 
 **Commit poruka format:**
 ```
 feat: dodan timer countdown
 fix: popravljen XP calculation bug
-docs: update progress.md
-style: dark mode za sve gumbe
+docs: update roadmap
+style: dark mode za gumbe
+refactor: extract timer logic to hook
 ```
 
 ---
 
-**Verzija:** 1.0
+**Verzija:** 2.0
 **Zadnji update:** 16. travnja 2026.
