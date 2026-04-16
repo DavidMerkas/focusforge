@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   // Static placeholder values — will come from localStorage in a later step
   const heroName = "Hero";
@@ -64,9 +66,12 @@ export default function Home() {
         </section>
 
         {/* START FOCUS BUTTON */}
-        <button className="w-full py-4 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 rounded-2xl font-bold text-lg tracking-wide transition-colors">
+        <Link
+          href="/setup"
+          className="w-full py-4 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 rounded-2xl font-bold text-lg tracking-wide transition-colors text-center block"
+        >
           ▶ Start Focus
-        </button>
+        </Link>
 
       </div>
 
