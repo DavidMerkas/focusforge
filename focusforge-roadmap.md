@@ -53,7 +53,7 @@
 - [x] Lik emoji (🧙)
 - [x] Pause / Resume gumb
 - [x] Stop gumb (potvrda "Jesi siguran?")
-- [ ] Timer zvuk/vibra kad završi (browser API)
+- [x] Timer zvuk/vibra kad završi (browser API)
 
 ### Timer Logika
 - [x] useState za remaining seconds

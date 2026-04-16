@@ -18,6 +18,7 @@ export default function SetupPage() {
   const router = useRouter();
   const [subject, setSubject] = useState("");
   const [duration, setDuration] = useState(25);
+  const [customDuration, setCustomDuration] = useState("");
   const [scenario, setScenario] = useState("dungeon");
   const [recentSubjects, setRecentSubjects] = useState<string[]>([]);
 
@@ -78,9 +79,9 @@ export default function SetupPage() {
             {DURATIONS.map((min) => (
               <button
                 key={min}
-                onClick={() => setDuration(min)}
+                onClick={() => { setDuration(min); setCustomDuration(""); }}
                 className={`py-3 rounded-xl font-semibold text-sm transition ${
-                  duration === min
+                  duration === min && customDuration === ""
                     ? "bg-purple-600 text-white"
                     : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                 }`}
@@ -88,6 +89,21 @@ export default function SetupPage() {
                 {min} min
               </button>
             ))}
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="number"
+              min={1}
+              max={480}
+              value={customDuration}
+              onChange={(e) => {
+                setCustomDuration(e.target.value);
+                const val = Number(e.target.value);
+                if (val >= 1 && val <= 480) setDuration(val);
+              }}
+              placeholder="Vlastito (min)"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
+            />
           </div>
         </section>
 

@@ -13,7 +13,10 @@ function CelebrationContent() {
   const subject = params.get("subject") ?? "Opći fokus";
 
   // Redirect if user navigated here directly without completing a real session
+  const validatedRef = useRef(false);
   useEffect(() => {
+    if (validatedRef.current) return;
+    validatedRef.current = true;
     const valid = sessionStorage.getItem("ff_session_complete");
     if (!valid) {
       router.replace("/");

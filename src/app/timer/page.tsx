@@ -22,8 +22,30 @@ function TimerContent() {
   const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
   const [isRunning, setIsRunning] = useState(true);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Navigate to celebration after timer completes (must be outside render/updater)
+  useEffect(() => {
+    if (!completed) return;
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(200);
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.8);
+    } catch {}
+    sessionStorage.setItem("ff_session_complete", "1");
+    const celebrationParams = new URLSearchParams({ duration: String(duration), subject, scenario });
+    router.push(`/celebration?${celebrationParams.toString()}`);
+  }, [completed, duration, subject, scenario, router]);
 
   // Write a token so celebration page knows a real session was completed
   useEffect(() => {
@@ -36,14 +58,7 @@ function TimerContent() {
         setSecondsLeft((prev) => {
           if (prev <= 1) {
             clearInterval(intervalRef.current!);
-            // Mark session as completed so celebration can verify it
-            sessionStorage.setItem("ff_session_complete", "1");
-            const celebrationParams = new URLSearchParams({
-              duration: String(duration),
-              subject,
-              scenario,
-            });
-            router.push(`/celebration?${celebrationParams.toString()}`);
+            setCompleted(true);
             return 0;
           }
           return prev - 1;
