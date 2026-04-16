@@ -1,7 +1,9 @@
-"use client"; // needed because we use useState (interactivity)
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { loadUser } from "@/lib/storage";
 
 const DURATIONS = [15, 25, 45, 90];
 
@@ -13,33 +15,41 @@ const SCENARIOS = [
 ];
 
 export default function SetupPage() {
+  const router = useRouter();
   const [subject, setSubject] = useState("");
-  const [duration, setDuration] = useState(25); // default 25 min
-  const [scenario, setScenario] = useState("dungeon"); // default dungeon
+  const [duration, setDuration] = useState(25);
+  const [scenario, setScenario] = useState("dungeon");
+  const [recentSubjects, setRecentSubjects] = useState<string[]>([]);
+
+  useEffect(() => {
+    const user = loadUser();
+    setRecentSubjects(user.recentSubjects);
+  }, []);
+
+  function handleStart() {
+    const finalSubject = subject.trim() || "Opći fokus";
+    const params = new URLSearchParams({
+      duration: String(duration),
+      subject: finalSubject,
+      scenario,
+    });
+    router.push(`/timer?${params.toString()}`);
+  }
 
   return (
     <main className="min-h-screen bg-slate-900 text-white flex flex-col max-w-[480px] mx-auto">
 
-      {/* HEADER */}
       <header className="px-5 pt-6 pb-3 flex items-center gap-3">
-        <Link
-          href="/"
-          className="text-slate-400 hover:text-white text-xl transition"
-          aria-label="Natrag"
-        >
+        <Link href="/" className="text-slate-400 hover:text-white text-xl transition" aria-label="Natrag">
           ←
         </Link>
         <h1 className="text-xl font-bold">Novi fokus</h1>
       </header>
 
-      {/* FORM */}
       <div className="flex-1 px-5 pb-6 flex flex-col gap-6 pt-4">
 
-        {/* SUBJECT INPUT */}
         <section className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-slate-300">
-            Što učiš?
-          </label>
+          <label className="text-sm font-semibold text-slate-300">Što učiš?</label>
           <input
             type="text"
             value={subject}
@@ -47,25 +57,23 @@ export default function SetupPage() {
             placeholder="npr. Matematika, Fizika, Engleski..."
             className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
           />
-          {/* Placeholder for recent subjects — localStorage comes later */}
-          <div className="flex gap-2 flex-wrap">
-            {["Matematika", "Fizika", "Engleski"].map((s) => (
-              <button
-                key={s}
-                onClick={() => setSubject(s)}
-                className="text-xs px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          {recentSubjects.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {recentSubjects.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSubject(s)}
+                  className="text-xs px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* DURATION SELECTOR */}
         <section className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-slate-300">
-            Trajanje
-          </label>
+          <label className="text-sm font-semibold text-slate-300">Trajanje</label>
           <div className="grid grid-cols-4 gap-2">
             {DURATIONS.map((min) => (
               <button
@@ -83,11 +91,8 @@ export default function SetupPage() {
           </div>
         </section>
 
-        {/* SCENARIO SELECTOR */}
         <section className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-slate-300">
-            Scenarij
-          </label>
+          <label className="text-sm font-semibold text-slate-300">Scenarij</label>
           <div className="grid grid-cols-4 gap-2">
             {SCENARIOS.map(({ id, icon, label }) => (
               <button
@@ -106,13 +111,12 @@ export default function SetupPage() {
           </div>
         </section>
 
-        {/* START BUTTON */}
-        <Link
-          href="/timer"
-          className="w-full py-4 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 rounded-2xl font-bold text-lg tracking-wide transition-colors text-center block mt-auto"
+        <button
+          onClick={handleStart}
+          className="w-full py-4 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 rounded-2xl font-bold text-lg tracking-wide transition-colors mt-auto"
         >
           ▶ Start Focus
-        </Link>
+        </button>
 
       </div>
     </main>
