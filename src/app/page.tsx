@@ -1,78 +1,96 @@
 export default function Home() {
-  // Static values for now — later these come from state/localStorage
+  // Static placeholder values — will come from localStorage in a later step
   const heroName = "Hero";
   const level = 1;
-  const xp = 30;
-  const xpToNext = 100;
+  const xp = 0;
+  const xpToNext = 50;
   const xpPercent = (xp / xpToNext) * 100;
+  const streak = 0;
+  const coins = 0;
+
+  const weeklyGoalMin = 100;
+  const weeklyDoneMin = 0;
+  const weeklyPercent = (weeklyDoneMin / weeklyGoalMin) * 100;
 
   return (
-    <main className="min-h-screen bg-slate-900 text-white flex flex-col">
+    <main className="min-h-screen bg-slate-900 text-white flex flex-col max-w-[480px] mx-auto">
+
       {/* HEADER */}
-      <header className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">
-          FocusForge <span>🧙</span>
-        </h1>
-        <div className="text-sm text-slate-300">
-          XP: <span className="text-purple-400 font-semibold">{xp}</span> / {xpToNext}
-        </div>
+      <header className="px-5 pt-6 pb-3 flex items-center justify-between">
+        <h1 className="text-xl font-bold tracking-tight">FocusForge 🧙</h1>
+        <button className="text-slate-400 hover:text-white text-xl transition" aria-label="Settings">
+          ⚙️
+        </button>
       </header>
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 gap-10">
-        {/* Hero card */}
-        <section className="flex flex-col items-center gap-3">
-          <div className="text-8xl">🧙‍♂️</div>
-          <div className="text-xl font-semibold">{heroName}</div>
-          <div className="text-sm text-purple-400">Level {level}</div>
+      {/* MAIN SCROLL AREA */}
+      <div className="flex-1 overflow-y-auto px-5 pb-6 flex flex-col gap-5">
 
-          {/* XP bar — width is set via inline style because the value is dynamic */}
-          <div className="w-64 h-3 bg-slate-800 rounded-full overflow-hidden mt-2">
+        {/* HERO CARD */}
+        <section className="bg-slate-800 rounded-2xl p-5 flex flex-col items-center gap-2">
+          <div className="text-7xl">🧙‍♂️</div>
+          <div className="text-lg font-semibold">{heroName}</div>
+          <div className="text-sm text-purple-400 font-medium">⭐ Level {level}</div>
+
+          {/* XP bar */}
+          <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden mt-1">
             <div
-              className="h-full bg-purple-600 transition-all"
+              className="h-full bg-purple-600 rounded-full transition-all duration-500"
               style={{ width: `${xpPercent}%` }}
             />
           </div>
-          <div className="text-xs text-slate-400">
-            {xp} / {xpToNext} XP
+          <div className="text-xs text-slate-400">{xp} / {xpToNext} XP</div>
+
+          {/* Streak + Coins */}
+          <div className="flex gap-6 mt-1">
+            <span className="text-sm text-slate-300">🔥 <span className="font-semibold text-white">{streak}</span> streak</span>
+            <span className="text-sm text-slate-300">💰 <span className="font-semibold text-amber-400">{coins}</span> coins</span>
           </div>
         </section>
 
-        {/* Timer display */}
-        <section className="text-8xl font-mono font-bold tracking-wider">
-          25:00
+        {/* WEEKLY CHALLENGE */}
+        <section className="bg-slate-800 rounded-2xl p-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-slate-200">📅 Tjedni izazov</span>
+            <span className="text-xs text-slate-400">{weeklyDoneMin}/{weeklyGoalMin} min</span>
+          </div>
+          <div className="text-xs text-slate-400">Fokusiraj se {weeklyGoalMin} minuta ovaj tjedan</div>
+          <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-500 rounded-full transition-all duration-500"
+              style={{ width: `${weeklyPercent}%` }}
+            />
+          </div>
         </section>
 
-        {/* Preset selector */}
-        <section className="flex gap-2 flex-wrap justify-center">
-          {[15, 25, 45, 90].map((min) => (
-            <button
-              key={min}
-              className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm transition"
-            >
-              {min} min
-            </button>
-          ))}
-        </section>
+        {/* START FOCUS BUTTON */}
+        <button className="w-full py-4 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 rounded-2xl font-bold text-lg tracking-wide transition-colors">
+          ▶ Start Focus
+        </button>
 
-        {/* Controls */}
-        <section className="flex gap-3">
-          <button className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-500 font-semibold transition">
-            ▶ Start
-          </button>
-          <button className="px-6 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-semibold transition">
-            ⏸ Pause
-          </button>
-          <button className="px-6 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-semibold transition">
-            ↻ Reset
-          </button>
-        </section>
       </div>
 
-      {/* FOOTER */}
-      <footer className="px-6 py-4 border-t border-slate-800 text-center text-sm text-slate-400">
-        Made with ⚡ by David
-      </footer>
+      {/* BOTTOM NAVIGATION */}
+      <nav className="border-t border-slate-800 px-2 py-3 flex justify-around">
+        {[
+          { icon: "🏠", label: "Home", active: true },
+          { icon: "📊", label: "Stats", active: false },
+          { icon: "🛒", label: "Shop", active: false },
+          { icon: "🎒", label: "Inv", active: false },
+          { icon: "👤", label: "Me", active: false },
+        ].map(({ icon, label, active }) => (
+          <button
+            key={label}
+            className={`flex flex-col items-center gap-0.5 text-xs px-3 py-1 rounded-xl transition ${
+              active ? "text-purple-400" : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            <span className="text-xl">{icon}</span>
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
+
     </main>
   );
 }
