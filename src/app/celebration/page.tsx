@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { loadUser, saveUser, applySession, xpForNextLevel } from "@/lib/storage";
+import { applySession, xpForNextLevel } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
+import { loadUserFromDB, saveUserToDB, saveSessionToDB } from "@/lib/db";
 
 function CelebrationContent() {
   const router = useRouter();
@@ -25,7 +27,7 @@ function CelebrationContent() {
     sessionStorage.removeItem("ff_session_complete");
   }, [router]);
 
-  // Apply session once on mount, save to localStorage
+  // Apply session once on mount, save to Supabase
   const appliedRef = useRef(false);
   const [xpEarned, setXpEarned] = useState(0);
   const [coinsEarned, setCoinsEarned] = useState(0);
@@ -38,17 +40,27 @@ function CelebrationContent() {
     if (appliedRef.current) return;
     appliedRef.current = true;
 
-    const user = loadUser();
-    const result = applySession(user, duration, subject);
-    saveUser(result.updated);
+    async function apply() {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) { router.replace("/login"); return; }
 
-    setXpEarned(result.xpEarned);
-    setCoinsEarned(result.coinsEarned);
-    setLevel(result.updated.level);
-    setXpAfter(result.updated.xp);
-    setXpToNext(xpForNextLevel(result.updated.level));
-    setLeveledUp(result.leveledUp);
-  }, [duration, subject]);
+      const userData = await loadUserFromDB(authUser.id);
+      if (!userData) { router.replace("/"); return; }
+
+      const result = applySession(userData, duration, subject);
+      await saveUserToDB(authUser.id, result.updated);
+      await saveSessionToDB(authUser.id, subject, duration, result.xpEarned, true);
+
+      setXpEarned(result.xpEarned);
+      setCoinsEarned(result.coinsEarned);
+      setLevel(result.updated.level);
+      setXpAfter(result.updated.xp);
+      setXpToNext(xpForNextLevel(result.updated.level));
+      setLeveledUp(result.leveledUp);
+    }
+
+    apply();
+  }, [duration, subject, router]);
 
   // Animated counters
   const [displayXP, setDisplayXP] = useState(0);

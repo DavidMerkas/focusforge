@@ -2,9 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { loadUser, xpForNextLevel } from "@/lib/storage";
+import { useRouter } from "next/navigation";
+import { xpForNextLevel } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
+import { loadUserFromDB, createUserInDB } from "@/lib/db";
 
 export default function Home() {
+  const router = useRouter();
   const [user, setUser] = useState({
     heroName: "Hero",
     level: 1,
@@ -13,11 +17,33 @@ export default function Home() {
     streak: 0,
   });
   const [xpToNext, setXpToNext] = useState(50);
+  const [loading, setLoading] = useState(true);
 
-  // Load from localStorage on mount (and when window gets focus — e.g. after returning from celebration)
   useEffect(() => {
-    function loadData() {
-      const data = loadUser();
+    async function loadData() {
+      // Check if user is logged in
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        router.replace("/login");
+        return;
+      }
+
+      // Load from DB, create row if first time
+      let data = await loadUserFromDB(authUser.id);
+      if (!data) {
+        const defaultData = {
+          heroName: "Heroj",
+          level: 1,
+          xp: 0,
+          coins: 0,
+          streak: 0,
+          lastSessionDate: null,
+          recentSubjects: [],
+        };
+        await createUserInDB(authUser.id, defaultData);
+        data = defaultData;
+      }
+
       setUser({
         heroName: data.heroName,
         level: data.level,
@@ -26,25 +52,44 @@ export default function Home() {
         streak: data.streak,
       });
       setXpToNext(xpForNextLevel(data.level));
+      setLoading(false);
     }
+
     loadData();
+
+    // Refresh when window gets focus (e.g. after returning from celebration)
     window.addEventListener("focus", loadData);
     return () => window.removeEventListener("focus", loadData);
-  }, []);
+  }, [router]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   const xpPercent = xpToNext > 0 ? (user.xp / xpToNext) * 100 : 100;
-
   const weeklyGoalMin = 100;
-  const weeklyDoneMin = 0; // will be tracked in a later version
+  const weeklyDoneMin = 0;
   const weeklyPercent = (weeklyDoneMin / weeklyGoalMin) * 100;
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+        <span className="text-slate-400 text-sm">Učitavanje...</span>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-900 text-white flex flex-col max-w-[480px] mx-auto">
 
       <header className="px-5 pt-6 pb-3 flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight">FocusForge 🧙</h1>
-        <button className="text-slate-400 hover:text-white text-xl transition" aria-label="Settings">
-          ⚙️
+        <button
+          onClick={handleLogout}
+          className="text-slate-400 hover:text-white text-sm transition"
+        >
+          Odjava
         </button>
       </header>
 
