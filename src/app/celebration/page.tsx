@@ -5,14 +5,29 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { applySession, xpForNextLevel } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
-import { loadUserFromDB, saveUserToDB, saveSessionToDB } from "@/lib/db";
+import { loadUserFromDB, saveUserToDB, saveSessionToDB, rollLoot, type ItemData } from "@/lib/db";
+
+const RARITY_COLORS: Record<string, string> = {
+  common:    "text-gray-400",
+  rare:      "text-blue-400",
+  epic:      "text-purple-400",
+  legendary: "text-yellow-400",
+};
+
+const RARITY_LABELS: Record<string, string> = {
+  common:    "Obično",
+  rare:      "Rijetko",
+  epic:      "Epsko",
+  legendary: "Legendarno",
+};
 
 function CelebrationContent() {
   const router = useRouter();
   const params = useSearchParams();
 
   const duration = Number(params.get("duration") ?? 25);
-  const subject = params.get("subject") ?? "Opći fokus";
+  const subject  = params.get("subject") ?? "Opći fokus";
+  const scenario = params.get("scenario") ?? "dungeon";
 
   // Redirect if user navigated here directly without completing a real session
   const validatedRef = useRef(false);
@@ -20,14 +35,11 @@ function CelebrationContent() {
     if (validatedRef.current) return;
     validatedRef.current = true;
     const valid = sessionStorage.getItem("ff_session_complete");
-    if (!valid) {
-      router.replace("/");
-      return;
-    }
+    if (!valid) { router.replace("/"); return; }
     sessionStorage.removeItem("ff_session_complete");
   }, [router]);
 
-  // Apply session once on mount, save to Supabase
+  // Apply session + roll loot once on mount
   const appliedRef = useRef(false);
   const [xpEarned, setXpEarned] = useState(0);
   const [coinsEarned, setCoinsEarned] = useState(0);
@@ -35,6 +47,7 @@ function CelebrationContent() {
   const [xpAfter, setXpAfter] = useState(0);
   const [xpToNext, setXpToNext] = useState(50);
   const [leveledUp, setLeveledUp] = useState(false);
+  const [lootItem, setLootItem] = useState<ItemData | null>(null);
 
   useEffect(() => {
     if (appliedRef.current) return;
@@ -51,6 +64,10 @@ function CelebrationContent() {
       await saveUserToDB(authUser.id, result.updated);
       await saveSessionToDB(authUser.id, subject, duration, result.xpEarned, true);
 
+      // Roll for loot drop (longer sessions = higher drop rate)
+      const item = await rollLoot(authUser.id, scenario, duration);
+      setLootItem(item);
+
       setXpEarned(result.xpEarned);
       setCoinsEarned(result.coinsEarned);
       setLevel(result.updated.level);
@@ -60,12 +77,13 @@ function CelebrationContent() {
     }
 
     apply();
-  }, [duration, subject, router]);
+  }, [duration, subject, scenario, router]);
 
   // Animated counters
   const [displayXP, setDisplayXP] = useState(0);
   const [displayCoins, setDisplayCoins] = useState(0);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showLoot, setShowLoot] = useState(false);
   const [breakTimer, setBreakTimer] = useState<number | null>(null);
 
   useEffect(() => {
@@ -82,10 +100,17 @@ function CelebrationContent() {
         setDisplayXP(xpEarned);
         setDisplayCoins(coinsEarned);
         if (leveledUp) setShowLevelUp(true);
+        else if (lootItem) setShowLoot(true);
       }
     }, 30);
     return () => clearInterval(interval);
-  }, [xpEarned, coinsEarned, leveledUp]);
+  }, [xpEarned, coinsEarned, leveledUp, lootItem]);
+
+  // After level up modal closes, show loot if any
+  function handleLevelUpClose() {
+    setShowLevelUp(false);
+    if (lootItem) setShowLoot(true);
+  }
 
   // Break countdown
   useEffect(() => {
@@ -158,6 +183,7 @@ function CelebrationContent() {
         </div>
       )}
 
+      {/* Level Up modal */}
       {showLevelUp && (
         <div className="absolute inset-0 bg-black/70 flex items-center justify-center px-8">
           <div className="bg-slate-800 rounded-2xl p-8 flex flex-col items-center gap-4 w-full max-w-xs">
@@ -166,10 +192,33 @@ function CelebrationContent() {
             <p className="text-purple-400 font-semibold text-lg">Level {level}</p>
             <p className="text-slate-400 text-sm text-center">Nastavljaš biti heroj!</p>
             <button
-              onClick={() => setShowLevelUp(false)}
+              onClick={handleLevelUpClose}
               className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-semibold transition"
             >
               Nastavi 🎉
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loot drop modal */}
+      {showLoot && lootItem && (
+        <div className="absolute inset-0 bg-black/70 flex items-center justify-center px-8">
+          <div className="bg-slate-800 rounded-2xl p-8 flex flex-col items-center gap-4 w-full max-w-xs">
+            <p className="text-sm text-slate-400">Predmet pronađen!</p>
+            <div className="text-7xl">{lootItem.icon}</div>
+            <h2 className={`text-xl font-bold ${RARITY_COLORS[lootItem.rarity]}`}>
+              {lootItem.name}
+            </h2>
+            <span className={`text-xs font-semibold px-3 py-1 rounded-full bg-slate-700 ${RARITY_COLORS[lootItem.rarity]}`}>
+              {RARITY_LABELS[lootItem.rarity]}
+            </span>
+            <p className="text-slate-400 text-sm text-center">{lootItem.description}</p>
+            <button
+              onClick={() => setShowLoot(false)}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-semibold transition"
+            >
+              Uzmi! 🎒
             </button>
           </div>
         </div>
