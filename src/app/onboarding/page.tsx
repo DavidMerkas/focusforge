@@ -4,12 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const AVATARS = ["🧙", "⚔️", "🏹", "🛡️", "🔮", "🐉"];
+const AVATARS = ["🧙‍♂️", "⚔️", "🏹", "🛡️", "🔮", "🐉"];
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [heroName, setHeroName] = useState("");
-  const [avatar, setAvatar] = useState("🧙");
+  const [avatar, setAvatar] = useState("🧙‍♂️");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -31,50 +31,64 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center max-w-[480px] mx-auto px-6 gap-8">
+    <main className="min-h-screen flex flex-col items-center justify-center px-6 gap-5" style={{ maxWidth: 480, margin: "0 auto" }}>
 
+      {/* Hero */}
       <div className="flex flex-col items-center gap-2">
-        <div className="text-6xl">{avatar}</div>
-        <h1 className="text-2xl font-bold text-center">Dobrodošao u FocusForge!</h1>
-        <p className="text-slate-400 text-sm text-center">Kako se zove tvoj heroj?</p>
+        <span className="animate-breathe" style={{ fontSize: 72, display: "inline-block" }}>{avatar}</span>
+        <span style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 600, color: "var(--ink)" }}>Dobrodošao! 🎉</span>
+        <span style={{ fontSize: 13, color: "var(--ink-soft)", fontWeight: 600 }}>Kako se zove tvoj heroj?</span>
       </div>
 
-      <div className="w-full flex flex-col gap-3">
-        <input
-          type="text"
-          value={heroName}
-          onChange={(e) => { setHeroName(e.target.value); setError(""); }}
-          placeholder="npr. Veliki David, Čarobnjak..."
-          maxLength={20}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
-        />
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-      </div>
+      <div className="ff-card" style={{ width: "100%", display: "flex", flexDirection: "column", gap: 16 }}>
 
-      <div className="w-full flex flex-col gap-3">
-        <p className="text-sm font-semibold text-slate-300 text-center">Odaberi avatar</p>
-        <div className="grid grid-cols-6 gap-2">
-          {AVATARS.map((a) => (
-            <button
-              key={a}
-              onClick={() => setAvatar(a)}
-              className={`text-3xl py-2 rounded-xl transition ${
-                avatar === a ? "bg-purple-600" : "bg-slate-800 hover:bg-slate-700"
-              }`}
-            >
-              {a}
-            </button>
-          ))}
+        {/* Name input */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-soft)" }}>IME HEROJA</label>
+          <input
+            className="ff-input"
+            type="text"
+            value={heroName}
+            onChange={(e) => { setHeroName(e.target.value); setError(""); }}
+            placeholder="npr. Veliki David, Čarobnjak..."
+            maxLength={20}
+            style={{ fontFamily: "var(--font-display)", fontSize: 16 }}
+          />
+          {error && <p style={{ color: "#e74c3c", fontSize: 12, fontWeight: 700, margin: 0 }}>{error}</p>}
         </div>
-      </div>
 
-      <button
-        onClick={handleFinish}
-        disabled={loading}
-        className="w-full py-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-2xl font-bold text-lg transition"
-      >
-        {loading ? "..." : "Kreni u avanturu! ⚔️"}
-      </button>
+        {/* Avatar picker */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-soft)" }}>ODABERI AVATAR</label>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8 }}>
+            {AVATARS.map((a) => (
+              <button
+                key={a}
+                onClick={() => setAvatar(a)}
+                style={{
+                  fontSize: 28, padding: "10px 0", borderRadius: 16, border: 0, cursor: "pointer",
+                  background: avatar === a ? "var(--accent)" : "#f0f5f2",
+                  boxShadow: avatar === a ? "0 4px 0 color-mix(in oklab, var(--accent), #000 20%)" : "0 3px 0 rgba(59,74,74,0.08)",
+                  transition: "all 0.12s",
+                  transform: avatar === a ? "translateY(1px)" : "translateY(0)",
+                }}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          className="ff-btn"
+          onClick={handleFinish}
+          disabled={loading}
+          style={{ opacity: loading ? 0.5 : 1 }}
+        >
+          {loading ? "..." : "Kreni u avanturu! ⚔️"}
+        </button>
+
+      </div>
 
     </main>
   );
