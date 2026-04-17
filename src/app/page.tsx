@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import { xpForNextLevel } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 import { loadUserFromDB, createUserInDB } from "@/lib/db";
@@ -144,21 +145,22 @@ export default function Home() {
 
       <nav className="border-t border-slate-800 px-2 py-3 flex justify-around">
         {[
-          { icon: "🏠", label: "Home", active: true },
-          { icon: "📊", label: "Stats", active: false },
-          { icon: "🛒", label: "Shop", active: false },
-          { icon: "🎒", label: "Inv", active: false },
-          { icon: "👤", label: "Me", active: false },
-        ].map(({ icon, label, active }) => (
-          <button
+          { icon: "🏠", label: "Home",  href: "/",          active: true  },
+          { icon: "📊", label: "Stats", href: "/",          active: false },
+          { icon: "🛒", label: "Shop",  href: "/",          active: false },
+          { icon: "🎒", label: "Inv",   href: "/inventory", active: false },
+          { icon: "👤", label: "Me",    href: "/",          active: false },
+        ].map(({ icon, label, href, active }) => (
+          <Link
             key={label}
+            href={href}
             className={`flex flex-col items-center gap-0.5 text-xs px-3 py-1 rounded-xl transition ${
               active ? "text-purple-400" : "text-slate-500 hover:text-slate-300"
             }`}
           >
             <span className="text-xl">{icon}</span>
             <span>{label}</span>
-          </button>
+          </Link>
         ))}
       </nav>
 
