@@ -6,6 +6,7 @@ import Link from "next/link";
 import { applySession, xpForNextLevel } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 import { loadUserFromDB, saveUserToDB, saveSessionToDB, rollLoot, type ItemData } from "@/lib/db";
+import { updateChallengeProgress } from "@/lib/challenges";
 
 const RARITY_COLORS: Record<string, string> = {
   common:    "text-gray-400",
@@ -63,6 +64,9 @@ function CelebrationContent() {
       const result = applySession(userData, duration, subject);
       await saveUserToDB(authUser.id, result.updated);
       await saveSessionToDB(authUser.id, subject, duration, result.xpEarned, true);
+
+      // Update weekly challenge progress
+      await updateChallengeProgress(authUser.id, duration);
 
       // Roll for loot drop (longer sessions = higher drop rate)
       const item = await rollLoot(authUser.id, scenario, duration);

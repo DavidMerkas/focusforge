@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { xpForNextLevel } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 import { loadUserFromDB, createUserInDB } from "@/lib/db";
+import { getOrCreateChallenges, type Challenge } from "@/lib/challenges";
 
 export default function Home() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function Home() {
     streak: 0,
   });
   const [xpToNext, setXpToNext] = useState(50);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,6 +60,11 @@ export default function Home() {
         streak: data.streak,
       });
       setXpToNext(xpForNextLevel(data.level));
+
+      // Load weekly challenges
+      const ch = await getOrCreateChallenges(authUser.id);
+      setChallenges(ch);
+
       setLoading(false);
     }
 
@@ -74,9 +81,6 @@ export default function Home() {
   }
 
   const xpPercent = xpToNext > 0 ? (user.xp / xpToNext) * 100 : 100;
-  const weeklyGoalMin = 100;
-  const weeklyDoneMin = 0;
-  const weeklyPercent = (weeklyDoneMin / weeklyGoalMin) * 100;
 
   if (loading) {
     return (
@@ -120,18 +124,34 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="bg-slate-800 rounded-2xl p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-slate-200">📅 Tjedni izazov</span>
-            <span className="text-xs text-slate-400">{weeklyDoneMin}/{weeklyGoalMin} min</span>
-          </div>
-          <div className="text-xs text-slate-400">Fokusiraj se {weeklyGoalMin} minuta ovaj tjedan</div>
-          <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-green-500 rounded-full transition-all duration-500"
-              style={{ width: `${weeklyPercent}%` }}
-            />
-          </div>
+        <section className="bg-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+          <span className="text-sm font-semibold text-slate-200">📅 Tjedni izazovi</span>
+          {challenges.map((c) => {
+            const pct = Math.min((c.current / c.target) * 100, 100);
+            const label = c.type === "total_minutes"
+              ? `Fokusiraj se ${c.target} minuta`
+              : `Završi ${c.target} sesije`;
+            const progress = c.type === "total_minutes"
+              ? `${c.current}/${c.target} min`
+              : `${c.current}/${c.target} sesija`;
+            return (
+              <div key={c.id} className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-300">{c.completed ? "✅" : "🎯"} {label}</span>
+                  <span className="text-xs text-slate-400">{progress}</span>
+                </div>
+                <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${c.completed ? "bg-green-500" : "bg-purple-600"}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                {c.completed && (
+                  <p className="text-xs text-green-400">+{c.rewardXp} XP, +{c.rewardCoins} coins zarađeno!</p>
+                )}
+              </div>
+            );
+          })}
         </section>
 
         <Link
