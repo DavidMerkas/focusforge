@@ -146,7 +146,7 @@ export default function Home() {
       <nav className="border-t border-slate-800 px-2 py-3 flex justify-around">
         {[
           { icon: "🏠", label: "Home",  href: "/",          active: true  },
-          { icon: "📊", label: "Stats", href: "/",          active: false },
+          { icon: "📊", label: "Stats", href: "/stats",      active: false },
           { icon: "🛒", label: "Shop",  href: "/shop",       active: false },
           { icon: "🎒", label: "Inv",   href: "/inventory", active: false },
           { icon: "👤", label: "Me",    href: "/",          active: false },
