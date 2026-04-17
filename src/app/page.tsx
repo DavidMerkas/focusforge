@@ -140,6 +140,9 @@ export default function Home() {
                   <span className="text-xs text-slate-300">{c.completed ? "✅" : "🎯"} {label}</span>
                   <span className="text-xs text-slate-400">{progress}</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-500">Nagrada: +{c.rewardXp} XP, +{c.rewardCoins} 💰</span>
+                </div>
                 <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${c.completed ? "bg-green-500" : "bg-purple-600"}`}

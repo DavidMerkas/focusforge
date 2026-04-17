@@ -45,7 +45,7 @@ export async function getOrCreateChallenges(userId: string): Promise<Challenge[]
 
   const { data: created } = await supabase
     .from("weekly_challenges")
-    .insert(challenges)
+    .upsert(challenges, { onConflict: "user_id,week_start,type" })
     .select();
 
   return (created ?? []).map(mapChallenge);
