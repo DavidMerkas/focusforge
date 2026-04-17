@@ -147,7 +147,7 @@ export default function Home() {
         {[
           { icon: "🏠", label: "Home",  href: "/",          active: true  },
           { icon: "📊", label: "Stats", href: "/",          active: false },
-          { icon: "🛒", label: "Shop",  href: "/",          active: false },
+          { icon: "🛒", label: "Shop",  href: "/shop",       active: false },
           { icon: "🎒", label: "Inv",   href: "/inventory", active: false },
           { icon: "👤", label: "Me",    href: "/",          active: false },
         ].map(({ icon, label, href, active }) => (
