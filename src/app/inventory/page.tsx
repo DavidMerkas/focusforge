@@ -68,7 +68,7 @@ export default function InventoryPage() {
         .order("obtained_at", { ascending: false });
       if (data) {
         setItems(data.map((row) => {
-          const item = row.items as Record<string, unknown>;
+          const item = row.items as unknown as Record<string, unknown>;
           return {
             id: row.id, name: item.name as string, description: item.description as string,
             scenario: item.scenario as string, rarity: item.rarity as string, icon: item.icon as string,
