@@ -1,8 +1,10 @@
 import { supabase } from "./supabase";
 import type { UserData } from "./storage";
 
+export type UserDataWithMeta = UserData & { onboarded: boolean };
+
 // Load user data from Supabase, returns null if not found
-export async function loadUserFromDB(userId: string): Promise<UserData | null> {
+export async function loadUserFromDB(userId: string): Promise<UserDataWithMeta | null> {
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -19,6 +21,7 @@ export async function loadUserFromDB(userId: string): Promise<UserData | null> {
     streak: data.streak,
     lastSessionDate: data.last_session_date,
     recentSubjects: data.recent_subjects ?? [],
+    onboarded: data.onboarded ?? false,
   };
 }
 

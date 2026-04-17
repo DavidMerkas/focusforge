@@ -41,7 +41,12 @@ export default function Home() {
           recentSubjects: [],
         };
         await createUserInDB(authUser.id, defaultData);
-        data = defaultData;
+        router.replace("/onboarding");
+        return;
+      }
+      if (!data.onboarded) {
+        router.replace("/onboarding");
+        return;
       }
 
       setUser({

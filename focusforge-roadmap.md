@@ -106,22 +106,22 @@
 **Tempo:** 1-3h/tjedan (⚠️ MATURA PREP — ne forsirati!)
 
 ### Auth
-- [ ] Supabase client setup (env variables u Vercel)
+- [x] Supabase client setup (env variables u Vercel)
 - [ ] Google OAuth login
-- [ ] Email/Password login
-- [ ] Login/Register screen
+- [x] Email/Password login
+- [x] Login/Register screen
 - [ ] Onboarding flow (prvi put: ime lika, odabir avatara)
-- [ ] Logout opcija u settings
+- [x] Logout opcija u settings
 
 ### Baza
-- [ ] Kreirati `users` tablicu (level, xp, coins, streak, preferences)
-- [ ] Kreirati `sessions` tablicu (subject, duration, xp_earned, completed)
+- [x] Kreirati `users` tablicu (level, xp, coins, streak, preferences)
+- [x] Kreirati `sessions` tablicu (subject, duration, xp_earned, completed)
 - [ ] Migracija localStorage → Supabase (za postojeće korisnike)
-- [ ] RLS (Row Level Security) na svim tablicama
+- [x] RLS (Row Level Security) na svim tablicama
 
 ### Sync
-- [ ] Save sesija u bazu nakon completion
-- [ ] Load user data iz baze pri startu
+- [x] Save sesija u bazu nakon completion
+- [x] Load user data iz baze pri startu
 - [ ] Offline fallback: localStorage ako nema neta, sync kad dođe
 
 ---

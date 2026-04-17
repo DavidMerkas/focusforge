@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { loadUserFromDB, createUserInDB } from "@/lib/db";
 
 type Mode = "login" | "register";
 
@@ -28,11 +29,26 @@ export default function LoginPage() {
         setConfirmSent(true);
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError(error.message);
       } else {
-        router.push("/");
+        // Check if user has a row in DB (might be first login after email confirm)
+        const userId = data.user.id;
+        let userData = await loadUserFromDB(userId);
+        if (!userData) {
+          // First login — create row and send to onboarding
+          await createUserInDB(userId, {
+            heroName: "Heroj",
+            level: 1, xp: 0, coins: 0, streak: 0,
+            lastSessionDate: null, recentSubjects: [],
+          });
+          router.push("/onboarding");
+        } else if (!userData.onboarded) {
+          router.push("/onboarding");
+        } else {
+          router.push("/");
+        }
       }
     }
 
