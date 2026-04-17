@@ -12,9 +12,23 @@ interface Session {
   created_at: string;
 }
 
-interface DayData {
-  date: string;   // "2026-04-18"
-  minutes: number;
+function NavBar() {
+  return (
+    <nav className="ff-nav">
+      {[
+        { icon: "🏠", label: "Home",  href: "/" },
+        { icon: "📊", label: "Stats", href: "/stats", active: true },
+        { icon: "🛒", label: "Shop",  href: "/shop" },
+        { icon: "🎒", label: "Inv",   href: "/inventory" },
+        { icon: "👤", label: "Me",    href: "/me" },
+      ].map(({ icon, label, href, active }) => (
+        <Link key={label} href={href} className={`ff-nav-item${active ? " active" : ""}`}>
+          <span style={{ fontSize: 20 }}>{icon}</span>
+          <span>{label}</span>
+        </Link>
+      ))}
+    </nav>
+  );
 }
 
 export default function StatsPage() {
@@ -26,205 +40,147 @@ export default function StatsPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace("/login"); return; }
-
       const { data } = await supabase
         .from("sessions")
         .select("subject, duration_min, xp_earned, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-
       if (data) setSessions(data);
       setLoading(false);
     }
     load();
   }, [router]);
 
-  // ── Computed stats ──────────────────────────────────────────────
   const totalSessions = sessions.length;
   const totalMinutes  = sessions.reduce((s, r) => s + r.duration_min, 0);
   const totalXP       = sessions.reduce((s, r) => s + r.xp_earned, 0);
   const totalHours    = Math.floor(totalMinutes / 60);
   const remMinutes    = totalMinutes % 60;
 
-  // Top kategorije po ukupnim minutama
   const subjectMap: Record<string, number> = {};
-  sessions.forEach((s) => {
-    subjectMap[s.subject] = (subjectMap[s.subject] ?? 0) + s.duration_min;
-  });
-  const topSubjects = Object.entries(subjectMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+  sessions.forEach((s) => { subjectMap[s.subject] = (subjectMap[s.subject] ?? 0) + s.duration_min; });
+  const topSubjects = Object.entries(subjectMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  // Last 14 days heatmap data
   const dayMap: Record<string, number> = {};
   sessions.forEach((s) => {
     const day = s.created_at.slice(0, 10);
     dayMap[day] = (dayMap[day] ?? 0) + s.duration_min;
   });
 
-  const last14: DayData[] = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000);
+  const last14 = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(Date.now() - (13 - i) * 86400000);
     const key = d.toISOString().slice(0, 10);
-    last14.push({ date: key, minutes: dayMap[key] ?? 0 });
-  }
+    return { date: key, minutes: dayMap[key] ?? 0, day: d.getDate() };
+  });
 
-  // Best day
-  const bestDay = last14.reduce((best, d) => d.minutes > best.minutes ? d : best, { date: "", minutes: 0 });
-
-  function heatColor(minutes: number): string {
-    if (minutes === 0)   return "bg-slate-800";
-    if (minutes < 30)    return "bg-purple-900";
-    if (minutes < 60)    return "bg-purple-700";
-    if (minutes < 120)   return "bg-purple-500";
-    return "bg-purple-400";
-  }
-
-  const DAY_LABELS = ["Po", "Ut", "Sr", "Če", "Pe", "Su", "Ne"];
+  const maxMin  = Math.max(...last14.map((d) => d.minutes), 1);
+  const bestDay = last14.reduce((b, d) => d.minutes > b.minutes ? d : b, { date: "", minutes: 0, day: 0 });
 
   return (
-    <main className="min-h-screen bg-slate-900 text-white flex flex-col max-w-[480px] mx-auto">
+    <main className="min-h-screen pb-28" style={{ maxWidth: 480, margin: "0 auto" }}>
 
-      <header className="px-5 pt-6 pb-3 flex items-center gap-3">
-        <Link href="/" className="text-slate-400 hover:text-white text-xl transition">←</Link>
-        <h1 className="text-xl font-bold">Statistike 📊</h1>
+      <header className="flex items-center gap-3 px-5 pt-6 pb-4">
+        <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "#fff", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", fontSize: 18, cursor: "pointer", textDecoration: "none", color: "var(--ink)" }}>←</Link>
+        <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)" }}>Statistike 📊</span>
       </header>
 
-      <div className="flex-1 px-5 pb-6 flex flex-col gap-5">
-
+      <div className="px-5 flex flex-col gap-4">
         {loading ? (
-          <p className="text-slate-400 text-sm text-center mt-10">Učitavanje...</p>
+          <p style={{ color: "var(--ink-soft)", textAlign: "center", marginTop: 40 }}>Učitavanje...</p>
         ) : sessions.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 mt-16 text-center">
-            <div className="text-5xl">📊</div>
-            <p className="text-slate-400 text-sm">Još nemaš sesija.<br />Završi prvu i vidi statistike!</p>
+          <div className="ff-card flex flex-col items-center gap-3" style={{ marginTop: 40, padding: 32 }}>
+            <div style={{ fontSize: 48 }}>📊</div>
+            <p style={{ color: "var(--ink-soft)", textAlign: "center", fontSize: 14, margin: 0 }}>Još nemaš sesija.<br />Završi prvu i vidi statistike!</p>
           </div>
         ) : (
           <>
             {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-slate-800 rounded-2xl p-4 flex flex-col items-center gap-1">
-                <span className="text-2xl font-bold text-purple-400">{totalSessions}</span>
-                <span className="text-xs text-slate-400 text-center">Sesija</span>
-              </div>
-              <div className="bg-slate-800 rounded-2xl p-4 flex flex-col items-center gap-1">
-                <span className="text-2xl font-bold text-purple-400">
-                  {totalHours > 0 ? `${totalHours}h ${remMinutes}m` : `${totalMinutes}m`}
-                </span>
-                <span className="text-xs text-slate-400 text-center">Ukupno</span>
-              </div>
-              <div className="bg-slate-800 rounded-2xl p-4 flex flex-col items-center gap-1">
-                <span className="text-2xl font-bold text-purple-400">{totalXP}</span>
-                <span className="text-xs text-slate-400 text-center">XP zarađen</span>
-              </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+              {[
+                { val: totalSessions, label: "Sesija", icon: "🎯" },
+                { val: totalHours > 0 ? `${totalHours}h ${remMinutes}m` : `${totalMinutes}m`, label: "Ukupno", icon: "⏱️" },
+                { val: totalXP,       label: "XP zarađen", icon: "⭐" },
+              ].map(({ val, label, icon }) => (
+                <div key={label} className="ff-card flex flex-col items-center gap-1" style={{ padding: "16px 10px" }}>
+                  <span style={{ fontSize: 24 }}>{icon}</span>
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, color: "var(--accent)" }}>{val}</span>
+                  <span style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 700, textAlign: "center" }}>{label}</span>
+                </div>
+              ))}
             </div>
 
             {/* Best day */}
             {bestDay.minutes > 0 && (
-              <div className="bg-slate-800 rounded-2xl p-4 flex items-center gap-3">
-                <span className="text-2xl">🏆</span>
+              <div className="ff-card flex items-center gap-3">
+                <span style={{ fontSize: 28 }}>🏆</span>
                 <div>
-                  <p className="text-sm font-semibold">Najbolji dan</p>
-                  <p className="text-xs text-slate-400">
+                  <p style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>Najbolji dan</p>
+                  <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0, fontWeight: 600 }}>
                     {new Date(bestDay.date).toLocaleDateString("hr", { weekday: "long", day: "numeric", month: "long" })} — {bestDay.minutes} min
                   </p>
                 </div>
               </div>
             )}
 
-            {/* 14-day bar chart */}
-            <section className="bg-slate-800 rounded-2xl p-4 flex flex-col gap-3">
-              <p className="text-sm font-semibold text-slate-300">Zadnjih 14 dana</p>
-              <div className="flex gap-2">
-                {/* Y os */}
-                {(() => {
-                  const maxMin = Math.max(...last14.map((d) => d.minutes), 1);
-                  return (
-                    <div className="flex flex-col justify-between text-right" style={{ height: "88px" }}>
-                      <span className="text-[9px] text-slate-500">{maxMin}m</span>
-                      <span className="text-[9px] text-slate-500">{Math.round(maxMin / 2)}m</span>
-                      <span className="text-[9px] text-slate-500">0</span>
-                    </div>
-                  );
-                })()}
+            {/* Bar chart */}
+            <div className="ff-card flex flex-col gap-3">
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Zadnjih 14 dana</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {/* Y axis */}
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: 88, textAlign: "right" }}>
+                  <span style={{ fontSize: 9, color: "var(--ink-faint)", fontWeight: 700 }}>{maxMin}m</span>
+                  <span style={{ fontSize: 9, color: "var(--ink-faint)", fontWeight: 700 }}>{Math.round(maxMin / 2)}m</span>
+                  <span style={{ fontSize: 9, color: "var(--ink-faint)", fontWeight: 700 }}>0</span>
+                </div>
                 {/* Bars */}
-                <div className="flex items-end gap-1 flex-1" style={{ height: "88px" }}>
-                  {last14.map(({ date, minutes }) => {
-                    const maxMin = Math.max(...last14.map((d) => d.minutes), 1);
+                <div style={{ display: "flex", gap: 3, flex: 1, alignItems: "flex-end", height: 88 }}>
+                  {last14.map(({ date, minutes, day }) => {
                     const pct = (minutes / maxMin) * 100;
-                    const d = new Date(date);
-                    const dayNum = d.getDate();
                     const isToday = date === new Date().toISOString().slice(0, 10);
                     return (
-                      <div key={date} className="flex flex-col items-center gap-1 flex-1">
-                        <div className="w-full flex items-end" style={{ height: "80px" }}>
-                          <div
-                            title={`${minutes} min`}
-                            className={`w-full rounded-t-md transition-all duration-500 ${
-                              isToday ? "bg-purple-400" : minutes > 0 ? "bg-purple-600" : "bg-slate-700"
-                            }`}
-                            style={{ height: `${Math.max(pct, minutes > 0 ? 4 : 0)}%` }}
-                          />
+                      <div key={date} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flex: 1 }}>
+                        <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: 80 }}>
+                          <div style={{
+                            width: "100%", borderRadius: "4px 4px 0 0",
+                            background: isToday ? "var(--accent)" : minutes > 0 ? "var(--accent-2)" : "rgba(59,74,74,0.08)",
+                            height: `${Math.max(pct, minutes > 0 ? 4 : 0)}%`,
+                            transition: "height 0.5s ease",
+                            boxShadow: minutes > 0 ? "inset 0 -3px 0 rgba(0,0,0,0.1)" : "none",
+                          }} />
                         </div>
-                        <span className={`text-[9px] leading-none ${isToday ? "text-purple-400 font-bold" : "text-slate-500"}`}>
-                          {dayNum}
-                        </span>
+                        <span style={{ fontSize: 9, color: isToday ? "var(--accent)" : "var(--ink-faint)", fontWeight: isToday ? 800 : 700 }}>{day}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
-            </section>
+            </div>
 
             {/* Top kategorije */}
             {topSubjects.length > 0 && (
-              <section className="bg-slate-800 rounded-2xl p-4 flex flex-col gap-3">
-                <p className="text-sm font-semibold text-slate-300">Top kategorije</p>
+              <div className="ff-card flex flex-col gap-3">
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Top kategorije</div>
                 {topSubjects.map(([subject, minutes], i) => {
-                  const maxMin = topSubjects[0][1];
-                  const pct = (minutes / maxMin) * 100;
+                  const pct = (minutes / topSubjects[0][1]) * 100;
                   return (
-                    <div key={subject} className="flex flex-col gap-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-300">{i + 1}. {subject}</span>
-                        <span className="text-slate-400">{minutes} min</span>
+                    <div key={subject} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700 }}>
+                        <span style={{ color: "var(--ink)" }}>{i + 1}. {subject}</span>
+                        <span style={{ color: "var(--ink-soft)" }}>{minutes} min</span>
                       </div>
-                      <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-purple-600 rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%` }}
-                        />
+                      <div style={{ height: 10, borderRadius: 999, background: "#eef2ea", overflow: "hidden", boxShadow: "inset 0 2px 3px rgba(59,74,74,0.12)" }}>
+                        <div style={{ height: "100%", width: `${pct}%`, borderRadius: 999, background: "var(--accent-2)", transition: "width 0.5s ease", boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.08)" }} />
                       </div>
                     </div>
                   );
                 })}
-              </section>
+              </div>
             )}
           </>
         )}
       </div>
 
-      {/* Bottom nav */}
-      <nav className="border-t border-slate-800 px-2 py-3 flex justify-around">
-        {[
-          { icon: "🏠", label: "Home",  href: "/" },
-          { icon: "📊", label: "Stats", href: "/stats",     active: true },
-          { icon: "🛒", label: "Shop",  href: "/shop" },
-          { icon: "🎒", label: "Inv",   href: "/inventory" },
-          { icon: "👤", label: "Me",    href: "/" },
-        ].map(({ icon, label, href, active }) => (
-          <Link
-            key={label}
-            href={href}
-            className={`flex flex-col items-center gap-0.5 text-xs px-3 py-1 rounded-xl transition ${
-              active ? "text-purple-400" : "text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            <span className="text-xl">{icon}</span>
-            <span>{label}</span>
-          </Link>
-        ))}
-      </nav>
+      <NavBar />
     </main>
   );
 }

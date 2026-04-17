@@ -1,49 +1,221 @@
 @import "tailwindcss";
 
-/* Dark mode is the default — slate-900 background set in layout.tsx */
-* {
-  box-sizing: border-box;
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+* { -webkit-tap-highlight-color: transparent; }
+
+/* ── Design tokens ──────────────────────────────────────────── */
+:root {
+  --bg-top: #cdebe1;
+  --bg-bot: #f6ead1;
+  --sand:   #fbf3df;
+  --card:   #ffffff;
+  --ink:    #3b4a4a;
+  --ink-soft: #6b7d7d;
+  --ink-faint:#a9b6b6;
+  --accent:   #ff9b7a;
+  --accent-2: #6fc6b0;
+  --accent-3: #ffd479;
+  --leaf:  #8fd7b0;
+  --sky:   #8dc7ea;
+  --streak:#ff7a59;
+  --coin:  #f4b03a;
+  --shadow: 0 6px 0 rgba(59,74,74,0.10), 0 14px 30px -12px rgba(59,74,74,0.25);
+  --font-display: 'Fredoka', system-ui;
+  --font-body:    'Nunito', system-ui;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+/* ── Base ───────────────────────────────────────────────────── */
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bot)) fixed;
+  min-height: 100vh;
 }
 
-/* Remove tap highlight on mobile */
-* {
-  -webkit-tap-highlight-color: transparent;
+/* ── Cards ──────────────────────────────────────────────────── */
+.ff-card {
+  background: var(--card);
+  border-radius: 24px;
+  padding: 16px;
+  box-shadow: var(--shadow);
 }
 
-/* Hero idle breathing animation */
+/* ── Chunky 3D buttons ──────────────────────────────────────── */
+.ff-btn {
+  appearance: none; border: 0; cursor: pointer;
+  width: 100%; padding: 18px 20px;
+  font-family: var(--font-display); font-weight: 600; font-size: 18px;
+  color: #fff; background: var(--accent);
+  border-radius: 22px;
+  box-shadow: 0 6px 0 color-mix(in oklab, var(--accent), #000 25%), 0 14px 24px -10px rgba(59,74,74,0.25);
+  transition: transform 0.08s, box-shadow 0.08s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  letter-spacing: 0.5px; position: relative;
+}
+.ff-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 color-mix(in oklab, var(--accent), #000 25%), 0 6px 14px -10px rgba(59,74,74,0.25);
+}
+.ff-btn.mint { background: var(--accent-2); box-shadow: 0 6px 0 color-mix(in oklab, var(--accent-2), #000 30%); }
+.ff-btn.mint:active { box-shadow: 0 2px 0 color-mix(in oklab, var(--accent-2), #000 30%); }
+.ff-btn.ghost { background: #fff; color: var(--ink); box-shadow: 0 5px 0 rgba(59,74,74,0.10); }
+.ff-btn.ghost:active { box-shadow: 0 2px 0 rgba(59,74,74,0.10); }
+.ff-btn.danger { background: #fff; color: #d26a5a; box-shadow: 0 5px 0 rgba(210,106,90,0.2); }
+.ff-btn.danger:active { box-shadow: 0 2px 0 rgba(210,106,90,0.2); }
+.ff-btn.sm { padding: 12px 16px; font-size: 14px; border-radius: 16px; }
+
+/* ── Pick buttons (duration/scenario) ──────────────────────── */
+.ff-pick {
+  background: #fff; border: 0; cursor: pointer;
+  border-radius: 18px; padding: 14px 10px;
+  font-family: var(--font-display); font-weight: 600; color: var(--ink);
+  box-shadow: 0 4px 0 rgba(59,74,74,0.08);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  transition: transform 0.08s, box-shadow 0.08s;
+  font-size: 14px;
+}
+.ff-pick:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(59,74,74,0.08); }
+.ff-pick.selected {
+  background: color-mix(in oklab, var(--accent) 14%, white);
+  box-shadow: 0 4px 0 color-mix(in oklab, var(--accent), #000 20%), inset 0 0 0 2px var(--accent);
+  color: var(--accent);
+}
+
+/* ── Input ──────────────────────────────────────────────────── */
+.ff-input {
+  width: 100%; padding: 14px 16px; border-radius: 18px;
+  background: #fff; border: 0;
+  font-family: var(--font-body); font-weight: 600;
+  color: var(--ink); font-size: 15px;
+  box-shadow: 0 3px 0 rgba(59,74,74,0.08), inset 0 0 0 2px transparent;
+  outline: none;
+}
+.ff-input:focus { box-shadow: 0 3px 0 rgba(59,74,74,0.08), inset 0 0 0 2px var(--accent-2); }
+
+/* ── Chip ───────────────────────────────────────────────────── */
+.ff-chip {
+  background: #fff; border-radius: 999px;
+  padding: 7px 12px; font-weight: 700; font-size: 13px;
+  display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: 0 3px 0 rgba(59,74,74,0.08);
+  color: var(--ink);
+}
+
+/* ── XP bar ─────────────────────────────────────────────────── */
+.ff-xpbar {
+  height: 14px; border-radius: 999px;
+  background: #eef2ea; overflow: hidden;
+  box-shadow: inset 0 2px 3px rgba(59,74,74,0.12);
+}
+.ff-xpbar-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent-3));
+  transition: width 1.2s cubic-bezier(.2,.9,.3,1.4);
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,0.08);
+}
+
+/* ── Bottom nav (floating pill) ─────────────────────────────── */
+.ff-nav {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+  background: #fff; border-radius: 999px; padding: 6px;
+  display: flex; gap: 2px;
+  box-shadow: 0 8px 24px -8px rgba(59,74,74,0.25), 0 2px 0 rgba(59,74,74,0.06);
+  z-index: 50;
+}
+.ff-nav-item {
+  border: 0; background: transparent; cursor: pointer;
+  width: 52px; padding: 7px 0; border-radius: 999px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  font-size: 10px; color: var(--ink-soft); font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.ff-nav-item.active {
+  background: color-mix(in oklab, var(--accent) 15%, white);
+  color: var(--accent);
+}
+
+/* ── Ambient clouds ─────────────────────────────────────────── */
+.ff-cloud {
+  position: fixed; pointer-events: none; z-index: 0;
+  width: 90px; height: 34px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 999px;
+  filter: blur(0.5px);
+  animation: ff-drift linear infinite;
+}
+.ff-cloud::before, .ff-cloud::after {
+  content:''; position:absolute; background:inherit; border-radius:50%;
+}
+.ff-cloud::before { width:46px; height:46px; top:-18px; left:14px; }
+.ff-cloud::after  { width:34px; height:34px; top:-12px; right:16px; }
+@keyframes ff-drift {
+  from { transform: translateX(-120px); }
+  to   { transform: translateX(110vw); }
+}
+
+/* ── Avatar animations ──────────────────────────────────────── */
 @keyframes breathe {
-  0%, 100% { transform: translateY(0px) scale(1);    }
-  50%       { transform: translateY(-6px) scale(1.05); }
+  0%,100% { transform: translateY(0) scale(1); }
+  50%     { transform: translateY(-5px) scale(1.03); }
 }
-.animate-breathe {
-  animation: breathe 3s ease-in-out infinite;
+@keyframes jump {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-22px) scale(1.08); }
+  100% { transform: translateY(0) scale(1); }
 }
+@keyframes sway {
+  0%,100% { transform: rotate(-3deg); }
+  50%     { transform: rotate(3deg); }
+}
+@keyframes sunpulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.06); }
+}
+@keyframes twinkle {
+  0%,100% { opacity: .4; transform: scale(0.9) rotate(-10deg); }
+  50%     { opacity: 1; transform: scale(1.15) rotate(10deg); }
+}
+.animate-breathe { animation: breathe 3.2s ease-in-out infinite; }
+.animate-sway    { animation: sway 4.5s ease-in-out infinite; }
+.animate-sunpulse{ animation: sunpulse 6s ease-in-out infinite; }
+.animate-twinkle { animation: twinkle 2.4s ease-in-out infinite; }
 
-/* Celebration pop animation */
+/* Celebration pop */
 @keyframes pop {
   0%   { transform: scale(0.5); opacity: 0; }
   70%  { transform: scale(1.1); opacity: 1; }
   100% { transform: scale(1);   opacity: 1; }
 }
-.animate-pop {
-  animation: pop 0.4s ease-out forwards;
-}
+.animate-pop { animation: pop 0.4s ease-out forwards; }
 
-/* Confetti pieces */
+/* Loot pop */
+@keyframes lootpop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-lootpop { animation: lootpop 0.6s ease-out forwards; }
+
+/* CTA pulse ring */
+@keyframes ringpulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,155,122,0.4); }
+  100% { box-shadow: 0 0 0 18px rgba(255,155,122,0); }
+}
+.animate-pulse-ring { animation: ringpulse 2.4s ease-out infinite; }
+
+/* Confetti */
 @keyframes confetti-fall {
-  0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
-  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
 .confetti-piece {
-  position: fixed;
-  width: 10px;
-  height: 10px;
+  position: fixed; top: -10px;
+  border-radius: 2px;
   animation: confetti-fall linear forwards;
-  pointer-events: none;
-  z-index: 999;
+  pointer-events: none; z-index: 999;
 }
+
+/* Tilt on hover */
+.ff-tilt { transition: transform 0.25s ease; }
+.ff-tilt:hover { transform: translateY(-2px) rotate(-0.4deg); }
