@@ -106,7 +106,7 @@ export default function Home() {
       <div className="flex-1 overflow-y-auto px-5 pb-6 flex flex-col gap-5">
 
         <section className="bg-slate-800 rounded-2xl p-5 flex flex-col items-center gap-2">
-          <div className="text-7xl">🧙‍♂️</div>
+          <div className="text-7xl animate-breathe">🧙‍♂️</div>
           <div className="text-lg font-semibold">{user.heroName}</div>
           <div className="text-sm text-purple-400 font-medium">⭐ Level {user.level}</div>
 

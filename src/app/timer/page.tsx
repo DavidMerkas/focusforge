@@ -138,7 +138,7 @@ function TimerContent() {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center gap-8 px-5">
-        <div className="text-8xl">🧙‍♂️</div>
+        <div className="text-8xl animate-breathe">🧙‍♂️</div>
 
         <div className="text-8xl font-mono font-bold tracking-widest">
           {formatTime(secondsLeft)}

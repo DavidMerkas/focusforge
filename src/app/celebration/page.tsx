@@ -8,6 +8,40 @@ import { supabase } from "@/lib/supabase";
 import { loadUserFromDB, saveUserToDB, saveSessionToDB, rollLoot, type ItemData } from "@/lib/db";
 import { updateChallengeProgress } from "@/lib/challenges";
 
+const CONFETTI_COLORS = ["#a855f7", "#ec4899", "#f59e0b", "#22c55e", "#3b82f6", "#f97316"];
+
+function Confetti() {
+  const pieces = Array.from({ length: 40 }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+    duration: `${1.5 + Math.random() * 2}s`,
+    delay: `${Math.random() * 0.8}s`,
+    size: `${8 + Math.random() * 8}px`,
+    borderRadius: Math.random() > 0.5 ? "50%" : "0",
+  }));
+  return (
+    <>
+      {pieces.map((p) => (
+        <div
+          key={p.id}
+          className="confetti-piece"
+          style={{
+            left: p.left,
+            top: "-10px",
+            backgroundColor: p.color,
+            width: p.size,
+            height: p.size,
+            borderRadius: p.borderRadius,
+            animationDuration: p.duration,
+            animationDelay: p.delay,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
 const RARITY_COLORS: Record<string, string> = {
   common:    "text-gray-400",
   rare:      "text-blue-400",
@@ -132,7 +166,8 @@ function CelebrationContent() {
   return (
     <main className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center max-w-[480px] mx-auto px-6 gap-6">
 
-      <div className="text-7xl">🎉</div>
+      <Confetti />
+      <div className="text-7xl animate-pop">🎉</div>
       <h1 className="text-2xl font-bold text-center">Sesija završena!</h1>
 
       <div className="bg-slate-800 rounded-2xl px-10 py-5 flex gap-10 items-center">
