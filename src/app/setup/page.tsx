@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { loadUser } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
+import { loadUserFromDB } from "@/lib/db";
 
 const DURATIONS = [15, 25, 45, 90];
 
@@ -21,18 +22,54 @@ export default function SetupPage() {
   const [customDuration, setCustomDuration] = useState("");
   const [scenario, setScenario] = useState("dungeon");
   const [recentSubjects, setRecentSubjects] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const user = loadUser();
-    setRecentSubjects(user.recentSubjects);
+    async function loadRecent() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const userData = await loadUserFromDB(user.id);
+      if (userData) setRecentSubjects(userData.recentSubjects);
+    }
+    loadRecent();
   }, []);
 
-  function handleStart() {
+  async function handleStart() {
+    setLoading(true);
     const finalSubject = subject.trim() || "Opći fokus";
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push("/login"); return; }
+
+    // Generate quest via API route
+    let questTitle = "Fokus sesija";
+    let questDesc = "";
+    try {
+      const res = await fetch("/api/generate-quest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: finalSubject,
+          scenario,
+          durationMin: duration,
+          userId: user.id,
+        }),
+      });
+      if (res.ok) {
+        const quest = await res.json();
+        questTitle = quest.title ?? questTitle;
+        questDesc = quest.description ?? "";
+      }
+    } catch {
+      // If API fails, continue with default title
+    }
+
     const params = new URLSearchParams({
       duration: String(duration),
       subject: finalSubject,
       scenario,
+      questTitle,
+      questDesc,
     });
     router.push(`/timer?${params.toString()}`);
   }
@@ -129,9 +166,10 @@ export default function SetupPage() {
 
         <button
           onClick={handleStart}
-          className="w-full py-4 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 rounded-2xl font-bold text-lg tracking-wide transition-colors mt-auto"
+          disabled={loading}
+          className="w-full py-4 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 disabled:opacity-60 rounded-2xl font-bold text-lg tracking-wide transition-colors mt-auto"
         >
-          ▶ Start Focus
+          {loading ? "Generiranje questa..." : "▶ Start Focus"}
         </button>
 
       </div>

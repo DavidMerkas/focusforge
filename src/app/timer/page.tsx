@@ -10,23 +10,45 @@ function formatTime(seconds: number): string {
   return `${m}:${s}`;
 }
 
+const SCENARIO_ICONS: Record<string, string> = {
+  dungeon: "⚔️",
+  garden: "🌱",
+  space: "🚀",
+  chaos: "🤡",
+};
+
 function TimerContent() {
   const router = useRouter();
   const params = useSearchParams();
 
-  const duration = Number(params.get("duration") ?? 25);
-  const subject = params.get("subject") ?? "Opći fokus";
-  const scenario = params.get("scenario") ?? "dungeon";
+  const duration   = Number(params.get("duration") ?? 25);
+  const subject    = params.get("subject") ?? "Opći fokus";
+  const scenario   = params.get("scenario") ?? "dungeon";
+  const questTitle = params.get("questTitle") ?? "Fokus sesija";
+  const questDesc  = params.get("questDesc") ?? "";
 
   const totalSeconds = duration * 60;
   const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
-  const [isRunning, setIsRunning] = useState(true);
+  const [isRunning, setIsRunning] = useState(false); // starts false — quest splash first
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [completed, setCompleted] = useState(false);
 
+  // Quest splash: shown for 4 seconds at start
+  const [showSplash, setShowSplash] = useState(true);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Navigate to celebration after timer completes (must be outside render/updater)
+  // Auto-dismiss splash after 4 seconds and start timer
+  useEffect(() => {
+    if (!showSplash) return;
+    const id = setTimeout(() => {
+      setShowSplash(false);
+      setIsRunning(true);
+    }, 4000);
+    return () => clearTimeout(id);
+  }, [showSplash]);
+
+  // Navigate to celebration after timer completes
   useEffect(() => {
     if (!completed) return;
     if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(200);
@@ -47,7 +69,6 @@ function TimerContent() {
     router.push(`/celebration?${celebrationParams.toString()}`);
   }, [completed, duration, subject, scenario, router]);
 
-  // Write a token so celebration page knows a real session was completed
   useEffect(() => {
     sessionStorage.setItem("ff_session", JSON.stringify({ duration, subject, scenario, startedAt: Date.now() }));
   }, [duration, subject, scenario]);
@@ -67,9 +88,8 @@ function TimerContent() {
     } else {
       clearInterval(intervalRef.current!);
     }
-
     return () => clearInterval(intervalRef.current!);
-  }, [isRunning, duration, subject, scenario, router]);
+  }, [isRunning]);
 
   function handleStop() {
     setIsRunning(false);
@@ -77,7 +97,30 @@ function TimerContent() {
   }
 
   const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100;
+  const scenarioIcon = SCENARIO_ICONS[scenario] ?? "⚔️";
 
+  // ── Quest splash screen ──────────────────────────────────────────
+  if (showSplash) {
+    return (
+      <main className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center max-w-[480px] mx-auto px-8 gap-6">
+        <div className="text-6xl">{scenarioIcon}</div>
+        <h2 className="text-2xl font-bold text-center">{questTitle}</h2>
+        {questDesc && (
+          <p className="text-slate-300 text-sm text-center leading-relaxed">{questDesc}</p>
+        )}
+        <div className="flex flex-col items-center gap-3 mt-2 w-full">
+          <button
+            onClick={() => { setShowSplash(false); setIsRunning(true); }}
+            className="w-full py-4 bg-purple-600 hover:bg-purple-500 rounded-2xl font-bold text-lg transition"
+          >
+            Kreni! ⚔️
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  // ── Timer screen ─────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-slate-900 text-white flex flex-col max-w-[480px] mx-auto">
 
@@ -89,9 +132,13 @@ function TimerContent() {
         <div className="w-8" />
       </header>
 
+      {/* Quest title — discrete, tap to see full */}
+      <div className="px-5 pb-1">
+        <p className="text-xs text-purple-400 text-center truncate">{scenarioIcon} {questTitle}</p>
+      </div>
+
       <div className="flex-1 flex flex-col items-center justify-center gap-8 px-5">
         <div className="text-8xl">🧙‍♂️</div>
-        <p className="text-slate-400 text-sm tracking-wide">Fokus sesija</p>
 
         <div className="text-8xl font-mono font-bold tracking-widest">
           {formatTime(secondsLeft)}
@@ -138,7 +185,6 @@ function TimerContent() {
   );
 }
 
-// useSearchParams requires Suspense boundary in Next.js App Router
 export default function TimerPage() {
   return (
     <Suspense>
