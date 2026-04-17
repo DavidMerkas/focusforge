@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 import type { UserData } from "./storage";
 
-export type UserDataWithMeta = UserData & { onboarded: boolean };
+export type UserDataWithMeta = UserData & { onboarded: boolean; friendCode?: string };
 
 // Load user data from Supabase, returns null if not found
 export async function loadUserFromDB(userId: string): Promise<UserDataWithMeta | null> {
@@ -22,6 +22,7 @@ export async function loadUserFromDB(userId: string): Promise<UserDataWithMeta |
     lastSessionDate: data.last_session_date,
     recentSubjects: data.recent_subjects ?? [],
     onboarded: data.onboarded ?? false,
+    friendCode: data.friend_code ?? null,
   };
 }
 

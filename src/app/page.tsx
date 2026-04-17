@@ -172,7 +172,7 @@ export default function Home() {
           { icon: "📊", label: "Stats", href: "/stats",      active: false },
           { icon: "🛒", label: "Shop",  href: "/shop",       active: false },
           { icon: "🎒", label: "Inv",   href: "/inventory", active: false },
-          { icon: "👤", label: "Me",    href: "/",          active: false },
+          { icon: "👤", label: "Me",    href: "/me",        active: false },
         ].map(({ icon, label, href, active }) => (
           <Link
             key={label}
