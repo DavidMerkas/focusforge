@@ -108,6 +108,29 @@ export async function rollLoot(userId: string, scenario: string, durationMin: nu
   };
 }
 
+// Get total XP and coin bonuses from equipped items for a user
+export async function getEquippedBonuses(userId: string): Promise<{ xpBonus: number; coinBonus: number }> {
+  const { data } = await supabase
+    .from("user_items")
+    .select("items(bonus_type, bonus_value)")
+    .eq("user_id", userId)
+    .eq("equipped", true);
+
+  let xpBonus = 0;
+  let coinBonus = 0;
+
+  if (data) {
+    for (const row of data) {
+      const item = row.items as unknown as { bonus_type: string | null; bonus_value: number } | null;
+      if (!item) continue;
+      if (item.bonus_type === "xp_boost")   xpBonus   += item.bonus_value;
+      if (item.bonus_type === "coin_boost")  coinBonus += item.bonus_value;
+    }
+  }
+
+  return { xpBonus, coinBonus };
+}
+
 // Save completed session to sessions table
 export async function saveSessionToDB(
   userId: string,

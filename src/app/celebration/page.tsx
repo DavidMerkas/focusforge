@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { applySession, xpForNextLevel } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
-import { loadUserFromDB, saveUserToDB, saveSessionToDB, rollLoot, type ItemData } from "@/lib/db";
+import { loadUserFromDB, saveUserToDB, saveSessionToDB, rollLoot, getEquippedBonuses, type ItemData } from "@/lib/db";
 import { updateChallengeProgress } from "@/lib/challenges";
 
 const RARITY_COLORS: Record<string, string> = {
@@ -77,14 +77,21 @@ function CelebrationContent() {
       if (!authUser) { router.replace("/login"); return; }
       const userData = await loadUserFromDB(authUser.id);
       if (!userData) { router.replace("/"); return; }
+      // Load equipped bonuses and add them on top of base rewards
+      const { xpBonus, coinBonus } = await getEquippedBonuses(authUser.id);
       const result = applySession(userData, duration, subject);
+      const totalXP    = result.xpEarned    + xpBonus;
+      const totalCoins = result.coinsEarned + coinBonus;
+      // Re-apply with bonuses on top (update coins manually since applySession doesn't know bonuses)
+      result.updated.xp    = Math.max(0, result.updated.xp    - result.xpEarned    + totalXP);
+      result.updated.coins = Math.max(0, result.updated.coins - result.coinsEarned + totalCoins);
       await saveUserToDB(authUser.id, result.updated);
-      await saveSessionToDB(authUser.id, subject, duration, result.xpEarned, true);
+      await saveSessionToDB(authUser.id, subject, duration, totalXP, true);
       await updateChallengeProgress(authUser.id, duration);
       const item = await rollLoot(authUser.id, scenario, duration);
       setLootItem(item);
-      setXpEarned(result.xpEarned);
-      setCoinsEarned(result.coinsEarned);
+      setXpEarned(totalXP);
+      setCoinsEarned(totalCoins);
       setLevel(result.updated.level);
       setXpAfter(result.updated.xp);
       setXpToNext(xpForNextLevel(result.updated.level));
