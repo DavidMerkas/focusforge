@@ -29,7 +29,7 @@ function NavBar() {
 
 export default function Home() {
   const router = useRouter();
-  const [user, setUser] = useState({ heroName: "Heroj", level: 1, xp: 0, coins: 0, streak: 0 });
+  const [user, setUser] = useState({ heroName: "Heroj", avatar: "🧙‍♂️", level: 1, xp: 0, coins: 0, streak: 0 });
   const [xpToNext, setXpToNext] = useState(50);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,14 +42,14 @@ export default function Home() {
 
       let data = await loadUserFromDB(authUser.id);
       if (!data) {
-        const defaultData = { heroName: "Heroj", level: 1, xp: 0, coins: 0, streak: 0, lastSessionDate: null, recentSubjects: [] };
+        const defaultData = { heroName: "Heroj", avatar: "🧙‍♂️", level: 1, xp: 0, coins: 0, streak: 0, lastSessionDate: null, recentSubjects: [] };
         await createUserInDB(authUser.id, defaultData);
         router.replace("/onboarding");
         return;
       }
       if (!data.onboarded) { router.replace("/onboarding"); return; }
 
-      setUser({ heroName: data.heroName, level: data.level, xp: data.xp, coins: data.coins, streak: data.streak });
+      setUser({ heroName: data.heroName, avatar: data.avatar ?? "🧙‍♂️", level: data.level, xp: data.xp, coins: data.coins, streak: data.streak });
       setXpToNext(xpForNextLevel(data.level));
       const ch = await getOrCreateChallenges(authUser.id);
       setChallenges(ch);
@@ -133,7 +133,7 @@ export default function Home() {
                     ? "jump 0.6s cubic-bezier(.2,.9,.3,1.4)"
                     : "breathe 3.2s ease-in-out infinite",
                 }}
-              >🧙‍♂️</span>
+              >{user.avatar}</span>
             </div>
             <span className="animate-twinkle" style={{ position: "absolute", top: 10, right: 14, fontSize: 14, color: "var(--accent-3)" }}>✨</span>
           </div>

@@ -31,6 +31,7 @@ function TimerContent() {
   const scenario   = params.get("scenario") ?? "dungeon";
   const questTitle = params.get("questTitle") ?? "Fokus sesija";
   const questDesc  = params.get("questDesc") ?? "";
+  const avatar     = params.get("avatar") ?? "🧙‍♂️";
 
   const totalSeconds = duration * 60;
   const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
@@ -64,7 +65,7 @@ function TimerContent() {
       osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.8);
     } catch {}
     sessionStorage.setItem("ff_session_complete", "1");
-    router.push(`/celebration?${new URLSearchParams({ duration: String(duration), subject, scenario }).toString()}`);
+    router.push(`/celebration?${new URLSearchParams({ duration: String(duration), subject, scenario, avatar }).toString()}`);
   }, [completed, duration, subject, scenario, router]);
 
   useEffect(() => {
@@ -95,7 +96,7 @@ function TimerContent() {
   if (showSplash) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center px-8 gap-6" style={{ maxWidth: 480, margin: "0 auto", background: scenarioBg }}>
-        <div style={{ fontSize: 64 }}>{scenarioIcon}</div>
+        <div style={{ fontSize: 64 }}>{avatar}</div>
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 600, textAlign: "center", color: isDark ? "#fff" : "var(--ink)", margin: 0 }}>{questTitle}</h2>
         {questDesc && (
           <p style={{ color: isDark ? "rgba(255,255,255,0.7)" : "var(--ink-soft)", fontSize: 14, textAlign: "center", lineHeight: 1.6, margin: 0 }}>{questDesc}</p>
@@ -172,7 +173,7 @@ function TimerContent() {
               }
               style={{ fontSize: 64, filter: "drop-shadow(0 6px 8px rgba(0,0,0,0.2))", display: "inline-block" }}
             >
-              🧙‍♂️
+              {avatar}
             </span>
 
             {/* Floating prop pored lika */}

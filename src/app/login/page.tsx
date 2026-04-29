@@ -38,6 +38,7 @@ export default function LoginPage() {
         if (!userData) {
           await createUserInDB(userId, {
             heroName: "Heroj",
+            avatar: "🧙‍♂️",
             level: 1, xp: 0, coins: 0, streak: 0,
             lastSessionDate: null, recentSubjects: [],
           });

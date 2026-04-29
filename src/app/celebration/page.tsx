@@ -7,6 +7,7 @@ import { applySession, xpForNextLevel } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 import { loadUserFromDB, saveUserToDB, saveSessionToDB, rollLoot, getEquippedBonuses, type ItemData } from "@/lib/db";
 import { updateChallengeProgress } from "@/lib/challenges";
+import { checkAndGrantAchievements, type AchievementGrant } from "@/lib/achievements";
 
 const RARITY_COLORS: Record<string, string> = {
   common:    "#9aa6a6",
@@ -50,6 +51,7 @@ function CelebrationContent() {
   const duration = Number(params.get("duration") ?? 25);
   const subject  = params.get("subject") ?? "Opći fokus";
   const scenario = params.get("scenario") ?? "dungeon";
+  const avatar   = params.get("avatar") ?? "🧙‍♂️";
 
   const validatedRef = useRef(false);
   useEffect(() => {
@@ -68,6 +70,8 @@ function CelebrationContent() {
   const [xpToNext, setXpToNext] = useState(50);
   const [leveledUp, setLeveledUp] = useState(false);
   const [lootItem, setLootItem] = useState<ItemData | null>(null);
+  const [achievementGrants, setAchievementGrants] = useState<AchievementGrant[]>([]);
+  const [achIndex, setAchIndex] = useState(0);
 
   useEffect(() => {
     if (appliedRef.current) return;
@@ -90,6 +94,40 @@ function CelebrationContent() {
       await updateChallengeProgress(authUser.id, duration);
       const item = await rollLoot(authUser.id, scenario, duration);
       setLootItem(item);
+
+      // Load context for achievement check
+      const { data: sessions } = await supabase
+        .from("sessions")
+        .select("duration_min, scenario")
+        .eq("user_id", authUser.id);
+      const totalSessions = sessions?.length ?? 0;
+      const totalMinutes  = (sessions ?? []).reduce((s, r) => s + r.duration_min, 0);
+      const scenariosUsed = [...new Set((sessions ?? []).map((s) => s.scenario).filter(Boolean))];
+      const { data: friends } = await supabase
+        .from("friends")
+        .select("id")
+        .eq("user_id", authUser.id)
+        .eq("status", "accepted")
+        .limit(1);
+      const grants = await checkAndGrantAchievements(authUser.id, {
+        totalSessions,
+        totalMinutes,
+        streak: result.updated.streak,
+        level: result.updated.level,
+        scenariosUsed,
+        hasFriend: (friends?.length ?? 0) > 0,
+      });
+      // Apply coin/xp rewards from achievements
+      if (grants.length > 0) {
+        const bonusCoins = grants.reduce((s, g) => s + g.coinsGranted, 0);
+        const bonusXP    = grants.reduce((s, g) => s + g.xpGranted, 0);
+        if (bonusCoins > 0 || bonusXP > 0) {
+          result.updated.coins += bonusCoins;
+          result.updated.xp   += bonusXP;
+          await saveUserToDB(authUser.id, result.updated);
+        }
+        setAchievementGrants(grants);
+      }
       setXpEarned(totalXP);
       setCoinsEarned(totalCoins);
       setLevel(result.updated.level);
@@ -121,6 +159,7 @@ function CelebrationContent() {
         setDisplayCoins(coinsEarned);
         if (leveledUp) setShowLevelUp(true);
         else if (lootItem) setShowLoot(true);
+        else if (achievementGrants.length > 0) setAchIndex(0);
       }
     }, 30);
     return () => clearInterval(interval);
@@ -157,7 +196,7 @@ function CelebrationContent() {
         <div style={{ position: "relative", width: "100%", height: 140, background: "radial-gradient(circle at 20% 80%, #8fd7b0 0 30px, transparent 31px), radial-gradient(circle at 85% 85%, #8fd7b0 0 24px, transparent 25px), linear-gradient(180deg, #e8f8d0, #c8eee0)", borderRadius: 24, overflow: "hidden" }}>
           <div style={{ position: "absolute", bottom: -8, left: 0, right: 0, height: 36, background: "radial-gradient(ellipse at center, rgba(143,215,176,0.9), transparent 70%)" }} />
           <div style={{ position: "absolute", left: "50%", bottom: 8, transform: "translateX(-50%)", textAlign: "center" }}>
-            <span className="animate-breathe" style={{ fontSize: 56, display: "inline-block", filter: "drop-shadow(0 4px 6px rgba(59,74,74,0.15))" }}>🧙‍♂️</span>
+            <span className="animate-breathe" style={{ fontSize: 56, display: "inline-block", filter: "drop-shadow(0 4px 6px rgba(59,74,74,0.15))" }}>{avatar}</span>
           </div>
           <span className="animate-twinkle" style={{ position: "absolute", top: 10, right: 14, fontSize: 14, color: "var(--accent-3)" }}>✨</span>
         </div>
@@ -224,9 +263,35 @@ function CelebrationContent() {
           <div style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 600, color: "var(--ink)" }}>Level Up!</div>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--accent)", fontWeight: 600 }}>Level {level}</div>
           <p style={{ color: "var(--ink-soft)", fontSize: 13, textAlign: "center", margin: 0 }}>Nastavljaš biti heroj!</p>
-          <button className="ff-btn" style={{ width: "100%" }} onClick={() => { setShowLevelUp(false); if (lootItem) setShowLoot(true); }}>Nastavi 🎉</button>
+          <button className="ff-btn" style={{ width: "100%" }} onClick={() => { setShowLevelUp(false); if (lootItem) setShowLoot(true); else if (achievementGrants.length > 0) setAchIndex(0); }}>Nastavi 🎉</button>
         </Modal>
       )}
+
+      {/* Achievement modal — prikazuje se jedan po jedan */}
+      {!showLevelUp && !showLoot && achIndex < achievementGrants.length && (() => {
+        const grant = achievementGrants[achIndex];
+        const ach   = grant.achievement;
+        const rewardText = grant.coinsGranted > 0 ? `+${grant.coinsGranted} coins`
+          : grant.xpGranted > 0 ? `+${grant.xpGranted} XP`
+          : grant.itemGranted ? `${grant.itemGranted.name} (${grant.itemGranted.rarity})`
+          : "";
+        return (
+          <Modal>
+            <p style={{ fontSize: 12, color: "var(--ink-soft)", fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: 1 }}>Achievement otključan!</p>
+            <div style={{ fontSize: 56 }}>{ach.icon}</div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--ink)", textAlign: "center" }}>{ach.title}</div>
+            <p style={{ color: "var(--ink-soft)", fontSize: 13, textAlign: "center", margin: 0 }}>{ach.description}</p>
+            {rewardText && (
+              <div style={{ background: "color-mix(in oklab, var(--accent-3) 30%, white)", borderRadius: 14, padding: "8px 18px", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>
+                🎁 {rewardText}
+              </div>
+            )}
+            <button className="ff-btn" style={{ width: "100%" }} onClick={() => setAchIndex((i) => i + 1)}>
+              {achIndex < achievementGrants.length - 1 ? "Sljedeći →" : "Super! 🎉"}
+            </button>
+          </Modal>
+        );
+      })()}
 
       {/* Loot modal */}
       {showLoot && lootItem && (
@@ -236,7 +301,7 @@ function CelebrationContent() {
           <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, color: RARITY_COLORS[lootItem.rarity] }}>{lootItem.name}</div>
           <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: RARITY_COLORS[lootItem.rarity], background: "rgba(0,0,0,0.06)", padding: "4px 10px", borderRadius: 999 }}>{RARITY_LABELS[lootItem.rarity]}</span>
           <p style={{ color: "var(--ink-soft)", fontSize: 13, textAlign: "center", margin: 0 }}>{lootItem.description}</p>
-          <button className="ff-btn mint" style={{ width: "100%" }} onClick={() => setShowLoot(false)}>Uzmi! 🎒</button>
+          <button className="ff-btn mint" style={{ width: "100%" }} onClick={() => { setShowLoot(false); if (achievementGrants.length > 0) setAchIndex(0); }}>Uzmi! 🎒</button>
         </Modal>
       )}
     </main>

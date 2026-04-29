@@ -15,6 +15,7 @@ export async function loadUserFromDB(userId: string): Promise<UserDataWithMeta |
 
   return {
     heroName: data.hero_name,
+    avatar: data.avatar ?? "🧙‍♂️",
     level: data.level,
     xp: data.xp,
     coins: data.coins,
@@ -31,6 +32,7 @@ export async function createUserInDB(userId: string, userData: UserData): Promis
   await supabase.from("users").insert({
     id: userId,
     hero_name: userData.heroName,
+    avatar: userData.avatar,
     level: userData.level,
     xp: userData.xp,
     coins: userData.coins,
@@ -44,6 +46,7 @@ export async function createUserInDB(userId: string, userData: UserData): Promis
 export async function saveUserToDB(userId: string, userData: UserData): Promise<void> {
   await supabase.from("users").update({
     hero_name: userData.heroName,
+    avatar: userData.avatar,
     level: userData.level,
     xp: userData.xp,
     coins: userData.coins,

@@ -24,6 +24,7 @@ export default function OnboardingPage() {
 
     await supabase.from("users").update({
       hero_name: name,
+      avatar,
       onboarded: true,
     }).eq("id", user.id);
 

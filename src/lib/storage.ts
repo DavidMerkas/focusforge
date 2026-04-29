@@ -3,16 +3,18 @@ const STORAGE_KEY = "focusforge_user";
 
 export interface UserData {
   heroName: string;
+  avatar: string;
   level: number;
   xp: number;
   coins: number;
   streak: number;
-  lastSessionDate: string | null; // ISO date string e.g. "2026-04-17"
-  recentSubjects: string[];       // last 5 subjects used
+  lastSessionDate: string | null;
+  recentSubjects: string[];
 }
 
 const DEFAULT_USER: UserData = {
   heroName: "Hero",
+  avatar: "🧙‍♂️",
   level: 1,
   xp: 0,
   coins: 0,

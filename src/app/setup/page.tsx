@@ -22,13 +22,17 @@ export default function SetupPage() {
   const [scenario, setScenario] = useState("dungeon");
   const [recentSubjects, setRecentSubjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [avatar, setAvatar] = useState("🧙‍♂️");
 
   useEffect(() => {
     async function loadRecent() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const userData = await loadUserFromDB(user.id);
-      if (userData) setRecentSubjects(userData.recentSubjects);
+      if (userData) {
+        setRecentSubjects(userData.recentSubjects);
+        setAvatar(userData.avatar ?? "🧙‍♂️");
+      }
     }
     loadRecent();
   }, []);
@@ -54,7 +58,7 @@ export default function SetupPage() {
       }
     } catch {}
 
-    const params = new URLSearchParams({ duration: String(duration), subject: finalSubject, scenario, questTitle, questDesc });
+    const params = new URLSearchParams({ duration: String(duration), subject: finalSubject, scenario, questTitle, questDesc, avatar });
     router.push(`/timer?${params.toString()}`);
   }
 

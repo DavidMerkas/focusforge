@@ -4,43 +4,24 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { ACHIEVEMENTS } from "@/lib/achievements";
 
-interface Session {
-  subject: string;
-  duration_min: number;
-  xp_earned: number;
-  completed: boolean;
-  created_at: string;
-}
-
-// Longest streak from session dates
-function calcLongestStreak(sessions: Session[]): number {
-  if (sessions.length === 0) return 0;
-  const uniqueDates = [...new Set(sessions.map((s) => s.created_at.slice(0, 10)))].sort();
-  let longest = 1, current = 1;
-  for (let i = 1; i < uniqueDates.length; i++) {
-    const diff = (new Date(uniqueDates[i]).getTime() - new Date(uniqueDates[i - 1]).getTime()) / 86400000;
-    if (diff === 1) { current++; if (current > longest) longest = current; }
-    else current = 1;
-  }
-  return longest;
-}
-
-const HEATMAP_LEVELS = ["#eef2ea", "#c5e8d4", "#8fd7b0", "#6fc6b0", "#3d9e85"];
-function heatLevel(min: number): string {
-  if (min === 0)   return HEATMAP_LEVELS[0];
-  if (min <= 30)   return HEATMAP_LEVELS[1];
-  if (min <= 60)   return HEATMAP_LEVELS[2];
-  if (min <= 120)  return HEATMAP_LEVELS[3];
-  return HEATMAP_LEVELS[4];
-}
+const RARITY_COLORS: Record<string, string> = {
+  common: "#9aa6a6", rare: "#4a9eff", epic: "#b060ff", legendary: "#f4b03a",
+};
+const REWARD_LABEL = (ach: typeof ACHIEVEMENTS[0]) => {
+  if (ach.rewardType === "coins") return `🪙 ${ach.rewardCoins} coins`;
+  if (ach.rewardType === "xp")    return `⭐ ${ach.rewardXP} XP`;
+  if (ach.rewardType === "item")  return `🎁 Random ${ach.rewardRarity} item`;
+  return "";
+};
 
 function NavBar() {
   return (
     <nav className="ff-nav">
       {[
         { icon: "🏠", label: "Home",  href: "/" },
-        { icon: "📊", label: "Stats", href: "/stats", active: true },
+        { icon: "🏆", label: "Achievements", href: "/stats", active: true },
         { icon: "🛒", label: "Shop",  href: "/shop" },
         { icon: "🎒", label: "Inv",   href: "/inventory" },
         { icon: "👤", label: "Me",    href: "/me" },
@@ -54,9 +35,9 @@ function NavBar() {
   );
 }
 
-export default function StatsPage() {
+export default function AchievementsPage() {
   const router = useRouter();
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,221 +45,79 @@ export default function StatsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace("/login"); return; }
       const { data } = await supabase
-        .from("sessions")
-        .select("subject, duration_min, xp_earned, completed, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (data) setSessions(data);
+        .from("user_achievements")
+        .select("achievement_id")
+        .eq("user_id", user.id);
+      setUnlockedIds(new Set((data ?? []).map((r) => r.achievement_id)));
       setLoading(false);
     }
     load();
   }, [router]);
 
-  const totalSessions    = sessions.length;
-  const totalMinutes     = sessions.reduce((s, r) => s + r.duration_min, 0);
-  const totalXP          = sessions.reduce((s, r) => s + r.xp_earned, 0);
-  const totalHours       = Math.floor(totalMinutes / 60);
-  const remMinutes       = totalMinutes % 60;
-  const completedCount   = sessions.filter((s) => s.completed).length;
-  const completionRate   = totalSessions > 0 ? Math.round((completedCount / totalSessions) * 100) : 0;
-  const longestStreak    = calcLongestStreak(sessions);
-
-  const subjectMap: Record<string, number> = {};
-  sessions.forEach((s) => { subjectMap[s.subject] = (subjectMap[s.subject] ?? 0) + s.duration_min; });
-  const topSubjects = Object.entries(subjectMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
-
-  const dayMap: Record<string, number> = {};
-  sessions.forEach((s) => {
-    const day = s.created_at.slice(0, 10);
-    dayMap[day] = (dayMap[day] ?? 0) + s.duration_min;
-  });
-
-  const last30 = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(Date.now() - (29 - i) * 86400000);
-    const key = d.toISOString().slice(0, 10);
-    return { date: key, minutes: dayMap[key] ?? 0, day: d.getDate() };
-  });
-
-  const maxMin  = Math.max(...last30.map((d) => d.minutes), 1);
-  const bestDay = last30.reduce((b, d) => d.minutes > b.minutes ? d : b, { date: "", minutes: 0, day: 0 });
-
-  // Heatmap — 16 weeks, starting from Monday 16 weeks ago
-  const today = new Date();
-  const daysFromMonday = (today.getDay() + 6) % 7;
-  const heatStart = new Date(today.getTime() - (daysFromMonday + 15 * 7) * 86400000);
-  const heatDays = Array.from({ length: 16 * 7 }, (_, i) => {
-    const d = new Date(heatStart.getTime() + i * 86400000);
-    const key = d.toISOString().slice(0, 10);
-    return { date: key, minutes: dayMap[key] ?? 0, month: d.getMonth(), day: d.getDate() };
-  });
-  // Build weeks array: 16 columns, each with 7 days
-  const heatWeeks = Array.from({ length: 16 }, (_, w) => heatDays.slice(w * 7, w * 7 + 7));
-  // Month label for each column (show only when month changes)
-  const monthNames = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Kol","Ruj","Lis","Stu","Pro"];
-  const weekMonthLabels = heatWeeks.map((week, w) => {
-    const firstDay = week[0];
-    const isNew = w === 0 || firstDay.month !== heatWeeks[w - 1][0].month;
-    return isNew ? monthNames[firstDay.month] : "";
-  });
+  const unlocked = ACHIEVEMENTS.filter((a) => unlockedIds.has(a.id));
+  const locked   = ACHIEVEMENTS.filter((a) => !unlockedIds.has(a.id));
 
   return (
     <main className="min-h-screen pb-28" style={{ maxWidth: 480, margin: "0 auto" }}>
 
       <header className="flex items-center gap-3 px-5 pt-6 pb-4">
-        <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "#fff", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", fontSize: 18, cursor: "pointer", textDecoration: "none", color: "var(--ink)" }}>←</Link>
-        <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)" }}>Statistike 📊</span>
+        <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)" }}>Achievements 🏆</span>
+        {!loading && (
+          <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 800, color: "var(--ink-soft)" }}>
+            {unlocked.length}/{ACHIEVEMENTS.length}
+          </span>
+        )}
       </header>
 
       <div className="px-5 flex flex-col gap-4">
         {loading ? (
           <p style={{ color: "var(--ink-soft)", textAlign: "center", marginTop: 40 }}>Učitavanje...</p>
-        ) : sessions.length === 0 ? (
-          <div className="ff-card flex flex-col items-center gap-3" style={{ marginTop: 40, padding: 32 }}>
-            <div style={{ fontSize: 48 }}>📊</div>
-            <p style={{ color: "var(--ink-soft)", textAlign: "center", fontSize: 14, margin: 0 }}>Još nemaš sesija.<br />Završi prvu i vidi statistike!</p>
-          </div>
         ) : (
           <>
-            {/* Summary cards — row 1 */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {[
-                { val: totalSessions, label: "Sesija", icon: "🎯" },
-                { val: totalHours > 0 ? `${totalHours}h ${remMinutes}m` : `${totalMinutes}m`, label: "Ukupno", icon: "⏱️" },
-                { val: totalXP,       label: "XP zarađen", icon: "⭐" },
-              ].map(({ val, label, icon }) => (
-                <div key={label} className="ff-card flex flex-col items-center gap-1" style={{ padding: "16px 10px" }}>
-                  <span style={{ fontSize: 24 }}>{icon}</span>
-                  <span style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, color: "var(--accent)" }}>{val}</span>
-                  <span style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 700, textAlign: "center" }}>{label}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Summary cards — row 2 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div className="ff-card flex flex-col items-center gap-1" style={{ padding: "16px 10px" }}>
-                <span style={{ fontSize: 24 }}>✅</span>
-                <span style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, color: "var(--accent-2)" }}>{completionRate}%</span>
-                <span style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 700, textAlign: "center" }}>Završenih sesija</span>
+            {/* Progress bar */}
+            <div className="ff-card" style={{ padding: "14px 18px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "var(--ink-soft)", marginBottom: 8 }}>
+                <span>Ukupni napredak</span>
+                <span>{unlocked.length} / {ACHIEVEMENTS.length}</span>
               </div>
-              <div className="ff-card flex flex-col items-center gap-1" style={{ padding: "16px 10px" }}>
-                <span style={{ fontSize: 24 }}>🔥</span>
-                <span style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, color: "var(--streak)" }}>{longestStreak} dana</span>
-                <span style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 700, textAlign: "center" }}>Rekordni streak</span>
+              <div className="ff-xpbar">
+                <div className="ff-xpbar-fill" style={{ width: `${(unlocked.length / ACHIEVEMENTS.length) * 100}%` }} />
               </div>
             </div>
 
-            {/* Best day */}
-            {bestDay.minutes > 0 && (
-              <div className="ff-card flex items-center gap-3">
-                <span style={{ fontSize: 28 }}>🏆</span>
-                <div>
-                  <p style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>Najbolji dan</p>
-                  <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0, fontWeight: 600 }}>
-                    {new Date(bestDay.date).toLocaleDateString("hr", { weekday: "long", day: "numeric", month: "long" })} — {bestDay.minutes} min
-                  </p>
-                </div>
+            {/* Unlocked */}
+            {unlocked.length > 0 && (
+              <div className="ff-card flex flex-col gap-3">
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Otključano ✅</div>
+                {unlocked.map((ach) => (
+                  <div key={ach.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderBottom: "1px dashed rgba(59,74,74,0.08)" }}>
+                    <span style={{ fontSize: 36, width: 44, textAlign: "center", flexShrink: 0 }}>{ach.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: "var(--ink)" }}>{ach.title}</div>
+                      <div style={{ fontSize: 12, color: "var(--ink-soft)", fontWeight: 600 }}>{ach.description}</div>
+                      <div style={{ fontSize: 11, color: ach.rewardRarity ? RARITY_COLORS[ach.rewardRarity] : "var(--accent)", fontWeight: 800, marginTop: 2 }}>{REWARD_LABEL(ach)}</div>
+                    </div>
+                    <span style={{ fontSize: 20 }}>✅</span>
+                  </div>
+                ))}
               </div>
             )}
 
-            {/* Bar chart — 30 dana */}
-            <div className="ff-card flex flex-col gap-3">
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Zadnjih 30 dana</div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: 88, textAlign: "right" }}>
-                  <span style={{ fontSize: 9, color: "var(--ink-faint)", fontWeight: 700 }}>{maxMin}m</span>
-                  <span style={{ fontSize: 9, color: "var(--ink-faint)", fontWeight: 700 }}>{Math.round(maxMin / 2)}m</span>
-                  <span style={{ fontSize: 9, color: "var(--ink-faint)", fontWeight: 700 }}>0</span>
-                </div>
-                <div style={{ display: "flex", gap: 2, flex: 1, alignItems: "flex-end", height: 88 }}>
-                  {last30.map(({ date, minutes, day }) => {
-                    const pct = (minutes / maxMin) * 100;
-                    const isToday = date === new Date().toISOString().slice(0, 10);
-                    return (
-                      <div key={date} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flex: 1 }}>
-                        <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: 80 }}>
-                          <div style={{
-                            width: "100%", borderRadius: "4px 4px 0 0",
-                            background: isToday ? "var(--accent)" : minutes > 0 ? "var(--accent-2)" : "rgba(59,74,74,0.08)",
-                            height: `${Math.max(pct, minutes > 0 ? 4 : 0)}%`,
-                            transition: "height 0.5s ease",
-                            boxShadow: minutes > 0 ? "inset 0 -3px 0 rgba(0,0,0,0.1)" : "none",
-                          }} />
-                        </div>
-                        {/* show day number only every 5th bar to avoid clutter */}
-                        <span style={{ fontSize: 8, color: isToday ? "var(--accent)" : "var(--ink-faint)", fontWeight: isToday ? 800 : 700 }}>
-                          {day % 5 === 0 || isToday ? day : ""}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Heatmap — 16 tjedana */}
-            <div className="ff-card flex flex-col gap-3">
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Aktivnost 📅</div>
-              <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-                <div style={{ display: "inline-flex", flexDirection: "column", gap: 0 }}>
-                  {/* Month labels */}
-                  <div style={{ display: "flex", gap: 3, marginBottom: 4, paddingLeft: 18 }}>
-                    {heatWeeks.map((_, w) => (
-                      <div key={w} style={{ width: 14, fontSize: 8, fontWeight: 800, color: "var(--ink-faint)", textAlign: "left", flexShrink: 0 }}>
-                        {weekMonthLabels[w]}
-                      </div>
-                    ))}
-                  </div>
-                  {/* Grid: 7 rows (Mon–Sun) × 16 columns (weeks) */}
-                  {["Po","Ut","Sr","Če","Pe","Su","Ne"].map((label, row) => (
-                    <div key={label} style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 3 }}>
-                      <span style={{ width: 14, fontSize: 8, color: "var(--ink-faint)", fontWeight: 800, textAlign: "right", flexShrink: 0 }}>{row % 2 === 0 ? label : ""}</span>
-                      {heatWeeks.map((week, w) => {
-                        const cell = week[row];
-                        return (
-                          <div
-                            key={w}
-                            title={cell ? `${cell.date}: ${cell.minutes} min` : ""}
-                            style={{
-                              width: 14, height: 14, borderRadius: 4, flexShrink: 0,
-                              background: cell ? heatLevel(cell.minutes) : HEATMAP_LEVELS[0],
-                              boxShadow: cell?.minutes ? "inset 0 -2px 0 rgba(0,0,0,0.08)" : "none",
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* Legend */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
-                <span style={{ fontSize: 10, color: "var(--ink-faint)", fontWeight: 700 }}>Manje</span>
-                {HEATMAP_LEVELS.map((color) => (
-                  <div key={color} style={{ width: 12, height: 12, borderRadius: 3, background: color, boxShadow: color !== HEATMAP_LEVELS[0] ? "inset 0 -2px 0 rgba(0,0,0,0.08)" : "none" }} />
-                ))}
-                <span style={{ fontSize: 10, color: "var(--ink-faint)", fontWeight: 700 }}>Više</span>
-              </div>
-            </div>
-
-            {/* Top kategorije */}
-            {topSubjects.length > 0 && (
+            {/* Locked */}
+            {locked.length > 0 && (
               <div className="ff-card flex flex-col gap-3">
-                <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Top kategorije</div>
-                {topSubjects.map(([subject, minutes], i) => {
-                  const pct = (minutes / topSubjects[0][1]) * 100;
-                  return (
-                    <div key={subject} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700 }}>
-                        <span style={{ color: "var(--ink)" }}>{i + 1}. {subject}</span>
-                        <span style={{ color: "var(--ink-soft)" }}>{minutes} min</span>
-                      </div>
-                      <div style={{ height: 10, borderRadius: 999, background: "#eef2ea", overflow: "hidden", boxShadow: "inset 0 2px 3px rgba(59,74,74,0.12)" }}>
-                        <div style={{ height: "100%", width: `${pct}%`, borderRadius: 999, background: "var(--accent-2)", transition: "width 0.5s ease", boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.08)" }} />
-                      </div>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Zaključano 🔒</div>
+                {locked.map((ach) => (
+                  <div key={ach.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderBottom: "1px dashed rgba(59,74,74,0.08)", opacity: 0.5 }}>
+                    <span style={{ fontSize: 36, width: 44, textAlign: "center", flexShrink: 0, filter: "grayscale(1)" }}>{ach.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: "var(--ink)" }}>{ach.title}</div>
+                      <div style={{ fontSize: 12, color: "var(--ink-soft)", fontWeight: 600 }}>{ach.description}</div>
+                      <div style={{ fontSize: 11, color: "var(--ink-faint)", fontWeight: 800, marginTop: 2 }}>{REWARD_LABEL(ach)}</div>
                     </div>
-                  );
-                })}
+                    <span style={{ fontSize: 18, color: "var(--ink-faint)" }}>🔒</span>
+                  </div>
+                ))}
               </div>
             )}
           </>
