@@ -159,9 +159,36 @@ function TimerContent() {
           </div>
         </div>
 
-        {/* Avatar */}
+        {/* Avatar — animacija ovisi o scenariju */}
         <div className="flex flex-col items-center gap-1">
-          <span className="animate-breathe" style={{ fontSize: 64, filter: "drop-shadow(0 6px 8px rgba(0,0,0,0.2))" }}>🧙‍♂️</span>
+          <div style={{ position: "relative", width: 100, height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span
+              className={
+                scenario === "dungeon" ? "animate-dungeon" :
+                scenario === "garden"  ? "animate-garden"  :
+                scenario === "space"   ? "animate-space"   :
+                scenario === "chaos"   ? "animate-chaos"   :
+                "animate-breathe"
+              }
+              style={{ fontSize: 64, filter: "drop-shadow(0 6px 8px rgba(0,0,0,0.2))", display: "inline-block" }}
+            >
+              🧙‍♂️
+            </span>
+
+            {/* Floating prop pored lika */}
+            {scenario === "dungeon" && (
+              <span className="animate-prop-sword" style={{ position: "absolute", right: 6, top: 8, fontSize: 28, transformOrigin: "center" }}>⚔️</span>
+            )}
+            {scenario === "garden" && (
+              <span className="animate-prop-drop" style={{ position: "absolute", right: 14, top: -2, fontSize: 22 }}>💧</span>
+            )}
+            {scenario === "space" && (
+              <span className="animate-prop-star" style={{ position: "absolute", right: 4, top: 4, fontSize: 22 }}>⭐</span>
+            )}
+            {scenario === "chaos" && (
+              <span className="animate-prop-chaos" style={{ position: "absolute", left: "50%", top: "50%", marginLeft: -12, marginTop: -12, fontSize: 22 }}>💥</span>
+            )}
+          </div>
           <div style={{ fontSize: 11, fontWeight: 800, color: isDark ? "rgba(255,255,255,0.5)" : "var(--ink-faint)", textTransform: "uppercase", letterSpacing: "0.8px" }}>U FOKUSU {scenarioIcon}</div>
         </div>
       </div>

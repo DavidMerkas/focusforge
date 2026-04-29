@@ -9,7 +9,30 @@ interface Session {
   subject: string;
   duration_min: number;
   xp_earned: number;
+  completed: boolean;
   created_at: string;
+}
+
+// Longest streak from session dates
+function calcLongestStreak(sessions: Session[]): number {
+  if (sessions.length === 0) return 0;
+  const uniqueDates = [...new Set(sessions.map((s) => s.created_at.slice(0, 10)))].sort();
+  let longest = 1, current = 1;
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const diff = (new Date(uniqueDates[i]).getTime() - new Date(uniqueDates[i - 1]).getTime()) / 86400000;
+    if (diff === 1) { current++; if (current > longest) longest = current; }
+    else current = 1;
+  }
+  return longest;
+}
+
+const HEATMAP_LEVELS = ["#eef2ea", "#c5e8d4", "#8fd7b0", "#6fc6b0", "#3d9e85"];
+function heatLevel(min: number): string {
+  if (min === 0)   return HEATMAP_LEVELS[0];
+  if (min <= 30)   return HEATMAP_LEVELS[1];
+  if (min <= 60)   return HEATMAP_LEVELS[2];
+  if (min <= 120)  return HEATMAP_LEVELS[3];
+  return HEATMAP_LEVELS[4];
 }
 
 function NavBar() {
@@ -42,7 +65,7 @@ export default function StatsPage() {
       if (!user) { router.replace("/login"); return; }
       const { data } = await supabase
         .from("sessions")
-        .select("subject, duration_min, xp_earned, created_at")
+        .select("subject, duration_min, xp_earned, completed, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (data) setSessions(data);
@@ -51,11 +74,14 @@ export default function StatsPage() {
     load();
   }, [router]);
 
-  const totalSessions = sessions.length;
-  const totalMinutes  = sessions.reduce((s, r) => s + r.duration_min, 0);
-  const totalXP       = sessions.reduce((s, r) => s + r.xp_earned, 0);
-  const totalHours    = Math.floor(totalMinutes / 60);
-  const remMinutes    = totalMinutes % 60;
+  const totalSessions    = sessions.length;
+  const totalMinutes     = sessions.reduce((s, r) => s + r.duration_min, 0);
+  const totalXP          = sessions.reduce((s, r) => s + r.xp_earned, 0);
+  const totalHours       = Math.floor(totalMinutes / 60);
+  const remMinutes       = totalMinutes % 60;
+  const completedCount   = sessions.filter((s) => s.completed).length;
+  const completionRate   = totalSessions > 0 ? Math.round((completedCount / totalSessions) * 100) : 0;
+  const longestStreak    = calcLongestStreak(sessions);
 
   const subjectMap: Record<string, number> = {};
   sessions.forEach((s) => { subjectMap[s.subject] = (subjectMap[s.subject] ?? 0) + s.duration_min; });
@@ -67,14 +93,33 @@ export default function StatsPage() {
     dayMap[day] = (dayMap[day] ?? 0) + s.duration_min;
   });
 
-  const last14 = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(Date.now() - (13 - i) * 86400000);
+  const last30 = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(Date.now() - (29 - i) * 86400000);
     const key = d.toISOString().slice(0, 10);
     return { date: key, minutes: dayMap[key] ?? 0, day: d.getDate() };
   });
 
-  const maxMin  = Math.max(...last14.map((d) => d.minutes), 1);
-  const bestDay = last14.reduce((b, d) => d.minutes > b.minutes ? d : b, { date: "", minutes: 0, day: 0 });
+  const maxMin  = Math.max(...last30.map((d) => d.minutes), 1);
+  const bestDay = last30.reduce((b, d) => d.minutes > b.minutes ? d : b, { date: "", minutes: 0, day: 0 });
+
+  // Heatmap — 16 weeks, starting from Monday 16 weeks ago
+  const today = new Date();
+  const daysFromMonday = (today.getDay() + 6) % 7;
+  const heatStart = new Date(today.getTime() - (daysFromMonday + 15 * 7) * 86400000);
+  const heatDays = Array.from({ length: 16 * 7 }, (_, i) => {
+    const d = new Date(heatStart.getTime() + i * 86400000);
+    const key = d.toISOString().slice(0, 10);
+    return { date: key, minutes: dayMap[key] ?? 0, month: d.getMonth(), day: d.getDate() };
+  });
+  // Build weeks array: 16 columns, each with 7 days
+  const heatWeeks = Array.from({ length: 16 }, (_, w) => heatDays.slice(w * 7, w * 7 + 7));
+  // Month label for each column (show only when month changes)
+  const monthNames = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Kol","Ruj","Lis","Stu","Pro"];
+  const weekMonthLabels = heatWeeks.map((week, w) => {
+    const firstDay = week[0];
+    const isNew = w === 0 || firstDay.month !== heatWeeks[w - 1][0].month;
+    return isNew ? monthNames[firstDay.month] : "";
+  });
 
   return (
     <main className="min-h-screen pb-28" style={{ maxWidth: 480, margin: "0 auto" }}>
@@ -94,7 +139,7 @@ export default function StatsPage() {
           </div>
         ) : (
           <>
-            {/* Summary cards */}
+            {/* Summary cards — row 1 */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
               {[
                 { val: totalSessions, label: "Sesija", icon: "🎯" },
@@ -107,6 +152,20 @@ export default function StatsPage() {
                   <span style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 700, textAlign: "center" }}>{label}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Summary cards — row 2 */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="ff-card flex flex-col items-center gap-1" style={{ padding: "16px 10px" }}>
+                <span style={{ fontSize: 24 }}>✅</span>
+                <span style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, color: "var(--accent-2)" }}>{completionRate}%</span>
+                <span style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 700, textAlign: "center" }}>Završenih sesija</span>
+              </div>
+              <div className="ff-card flex flex-col items-center gap-1" style={{ padding: "16px 10px" }}>
+                <span style={{ fontSize: 24 }}>🔥</span>
+                <span style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, color: "var(--streak)" }}>{longestStreak} dana</span>
+                <span style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 700, textAlign: "center" }}>Rekordni streak</span>
+              </div>
             </div>
 
             {/* Best day */}
@@ -122,19 +181,17 @@ export default function StatsPage() {
               </div>
             )}
 
-            {/* Bar chart */}
+            {/* Bar chart — 30 dana */}
             <div className="ff-card flex flex-col gap-3">
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Zadnjih 14 dana</div>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Zadnjih 30 dana</div>
               <div style={{ display: "flex", gap: 6 }}>
-                {/* Y axis */}
                 <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: 88, textAlign: "right" }}>
                   <span style={{ fontSize: 9, color: "var(--ink-faint)", fontWeight: 700 }}>{maxMin}m</span>
                   <span style={{ fontSize: 9, color: "var(--ink-faint)", fontWeight: 700 }}>{Math.round(maxMin / 2)}m</span>
                   <span style={{ fontSize: 9, color: "var(--ink-faint)", fontWeight: 700 }}>0</span>
                 </div>
-                {/* Bars */}
-                <div style={{ display: "flex", gap: 3, flex: 1, alignItems: "flex-end", height: 88 }}>
-                  {last14.map(({ date, minutes, day }) => {
+                <div style={{ display: "flex", gap: 2, flex: 1, alignItems: "flex-end", height: 88 }}>
+                  {last30.map(({ date, minutes, day }) => {
                     const pct = (minutes / maxMin) * 100;
                     const isToday = date === new Date().toISOString().slice(0, 10);
                     return (
@@ -148,11 +205,59 @@ export default function StatsPage() {
                             boxShadow: minutes > 0 ? "inset 0 -3px 0 rgba(0,0,0,0.1)" : "none",
                           }} />
                         </div>
-                        <span style={{ fontSize: 9, color: isToday ? "var(--accent)" : "var(--ink-faint)", fontWeight: isToday ? 800 : 700 }}>{day}</span>
+                        {/* show day number only every 5th bar to avoid clutter */}
+                        <span style={{ fontSize: 8, color: isToday ? "var(--accent)" : "var(--ink-faint)", fontWeight: isToday ? 800 : 700 }}>
+                          {day % 5 === 0 || isToday ? day : ""}
+                        </span>
                       </div>
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* Heatmap — 16 tjedana */}
+            <div className="ff-card flex flex-col gap-3">
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Aktivnost 📅</div>
+              <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+                <div style={{ display: "inline-flex", flexDirection: "column", gap: 0 }}>
+                  {/* Month labels */}
+                  <div style={{ display: "flex", gap: 3, marginBottom: 4, paddingLeft: 18 }}>
+                    {heatWeeks.map((_, w) => (
+                      <div key={w} style={{ width: 14, fontSize: 8, fontWeight: 800, color: "var(--ink-faint)", textAlign: "left", flexShrink: 0 }}>
+                        {weekMonthLabels[w]}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Grid: 7 rows (Mon–Sun) × 16 columns (weeks) */}
+                  {["Po","Ut","Sr","Če","Pe","Su","Ne"].map((label, row) => (
+                    <div key={label} style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 3 }}>
+                      <span style={{ width: 14, fontSize: 8, color: "var(--ink-faint)", fontWeight: 800, textAlign: "right", flexShrink: 0 }}>{row % 2 === 0 ? label : ""}</span>
+                      {heatWeeks.map((week, w) => {
+                        const cell = week[row];
+                        return (
+                          <div
+                            key={w}
+                            title={cell ? `${cell.date}: ${cell.minutes} min` : ""}
+                            style={{
+                              width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                              background: cell ? heatLevel(cell.minutes) : HEATMAP_LEVELS[0],
+                              boxShadow: cell?.minutes ? "inset 0 -2px 0 rgba(0,0,0,0.08)" : "none",
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Legend */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+                <span style={{ fontSize: 10, color: "var(--ink-faint)", fontWeight: 700 }}>Manje</span>
+                {HEATMAP_LEVELS.map((color) => (
+                  <div key={color} style={{ width: 12, height: 12, borderRadius: 3, background: color, boxShadow: color !== HEATMAP_LEVELS[0] ? "inset 0 -2px 0 rgba(0,0,0,0.08)" : "none" }} />
+                ))}
+                <span style={{ fontSize: 10, color: "var(--ink-faint)", fontWeight: 700 }}>Više</span>
               </div>
             </div>
 

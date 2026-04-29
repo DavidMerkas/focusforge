@@ -182,6 +182,67 @@ body {
 .animate-sunpulse{ animation: sunpulse 6s ease-in-out infinite; }
 .animate-twinkle { animation: twinkle 2.4s ease-in-out infinite; }
 
+/* ── Scenario-specific avatar animations ────────────────────── */
+/* Dungeon: heroj zamahuje s lijeva-desno, blagi naklon naprijed */
+@keyframes dungeon-swing {
+  0%, 100% { transform: rotate(-8deg) translateY(0); }
+  25%      { transform: rotate(-12deg) translateY(-2px); }
+  50%      { transform: rotate(14deg)  translateY(-4px) scale(1.05); }
+  75%      { transform: rotate(8deg)   translateY(-1px); }
+}
+/* Vrt: smireno njihanje + blago dizanje (kao da diše s biljkama) */
+@keyframes garden-tend {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-6px) rotate(2deg); }
+}
+/* Svemir: lebdjenje u zero gravity, blagi spin */
+@keyframes space-float {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  25%      { transform: translateY(-10px) rotate(0deg); }
+  50%      { transform: translateY(-14px) rotate(4deg); }
+  75%      { transform: translateY(-6px)  rotate(2deg); }
+}
+/* Chaos: kaotični skokovi, rotacije, scale — wild */
+@keyframes chaos-wild {
+  0%   { transform: translateY(0)    rotate(0deg)   scale(1); }
+  15%  { transform: translateY(-12px) rotate(-15deg) scale(1.1); }
+  30%  { transform: translateY(-2px)  rotate(20deg)  scale(0.95); }
+  45%  { transform: translateY(-18px) rotate(-8deg)  scale(1.15); }
+  60%  { transform: translateY(0)     rotate(25deg)  scale(0.9); }
+  75%  { transform: translateY(-8px)  rotate(-25deg) scale(1.05); }
+  90%  { transform: translateY(-4px)  rotate(10deg)  scale(1); }
+  100% { transform: translateY(0)     rotate(0deg)   scale(1); }
+}
+
+.animate-dungeon { animation: dungeon-swing 1.6s ease-in-out infinite; transform-origin: center bottom; }
+.animate-garden  { animation: garden-tend  3.5s ease-in-out infinite; transform-origin: center bottom; }
+.animate-space   { animation: space-float  4.8s ease-in-out infinite; transform-origin: center; }
+.animate-chaos   { animation: chaos-wild   1.2s ease-in-out infinite; transform-origin: center; }
+
+/* Floating prop koji prati lika (mač, kap vode, zvjezdica, emoji) */
+@keyframes prop-orbit {
+  0%, 100% { transform: translate(0, 0) rotate(-15deg); opacity: 0.9; }
+  50%      { transform: translate(8px, -8px) rotate(20deg); opacity: 1; }
+}
+@keyframes drop-fall {
+  0%   { transform: translateY(-20px); opacity: 0; }
+  30%  { opacity: 1; }
+  100% { transform: translateY(40px); opacity: 0; }
+}
+@keyframes star-twinkle {
+  0%, 100% { transform: scale(0.7) rotate(0deg);   opacity: 0.6; }
+  50%      { transform: scale(1.2) rotate(180deg); opacity: 1; }
+}
+@keyframes chaos-spin {
+  0%   { transform: rotate(0deg)   translateX(20px) rotate(0deg);   }
+  100% { transform: rotate(360deg) translateX(20px) rotate(-360deg); }
+}
+
+.animate-prop-sword { animation: prop-orbit 1.6s ease-in-out infinite; }
+.animate-prop-drop  { animation: drop-fall 2.2s ease-in-out infinite; }
+.animate-prop-star  { animation: star-twinkle 2s ease-in-out infinite; }
+.animate-prop-chaos { animation: chaos-spin 2.5s linear infinite; }
+
 /* Celebration pop */
 @keyframes pop {
   0%   { transform: scale(0.5); opacity: 0; }
