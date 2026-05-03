@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { FilterPicker } from "@/components/FilterPicker";
 
 interface InventoryItem {
   id: string;         // user_items.id
@@ -40,9 +41,9 @@ function NavBar() {
     <nav className="ff-nav">
       {[
         { icon: "🏠", label: "Home",  href: "/" },
-        { icon: "📊", label: "Stats", href: "/stats" },
+        { icon: "🏆", label: "Achievements", href: "/stats" },
         { icon: "🛒", label: "Shop",  href: "/shop" },
-        { icon: "🎒", label: "Inv",   href: "/inventory", active: true },
+        { icon: "🎒", label: "Inventory",   href: "/inventory", active: true },
         { icon: "👤", label: "Me",    href: "/me" },
       ].map(({ icon, label, href, active }) => (
         <Link key={label} href={href} className={`ff-nav-item${active ? " active" : ""}`}>
@@ -121,7 +122,7 @@ export default function InventoryPage() {
     <main className="min-h-screen pb-28" style={{ maxWidth: 480, margin: "0 auto" }}>
 
       <header className="flex items-center gap-3 px-5 pt-6 pb-4">
-        <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "#fff", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", fontSize: 18, cursor: "pointer", textDecoration: "none", color: "var(--ink)" }}>←</Link>
+        <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "rgba(255,255,255,0.06)", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)", fontSize: 18, cursor: "pointer", textDecoration: "none", color: "var(--ink)" }}>←</Link>
         <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)" }}>Inventar 🎒</span>
       </header>
 
@@ -180,14 +181,8 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="px-5 pb-3 flex gap-2 overflow-x-auto">
-        {FILTERS.map(({ id, label, icon }) => (
-          <button key={id} onClick={() => setFilter(id)}
-            style={{ flexShrink: 0, padding: "8px 14px", borderRadius: 999, border: 0, cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "var(--font-body)", background: filter === id ? "var(--accent)" : "#fff", color: filter === id ? "#fff" : "var(--ink-soft)", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", transition: "all 0.15s" }}
-          >{icon} {label}</button>
-        ))}
-      </div>
+      {/* Filter dropdown */}
+      <FilterPicker value={filter} onChange={setFilter} options={FILTERS} />
 
       <div className="px-5">
         {loading ? (
@@ -201,7 +196,7 @@ export default function InventoryPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
             {filtered.map((item) => (
               <button key={item.id} onClick={() => setSelected(item)}
-                style={{ background: "#fff", border: `2px solid ${item.equipped ? RARITY_COLORS[item.rarity] : "rgba(59,74,74,0.08)"}`, borderRadius: 20, padding: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", boxShadow: item.equipped ? `0 4px 0 ${RARITY_COLORS[item.rarity]}44` : "0 4px 0 rgba(59,74,74,0.08)", transition: "transform 0.08s", position: "relative" }}
+                style={{ background: "rgba(255,255,255,0.06)", border: `2px solid ${item.equipped ? RARITY_COLORS[item.rarity] : "rgba(59,74,74,0.08)"}`, borderRadius: 20, padding: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", boxShadow: item.equipped ? `0 4px 0 ${RARITY_COLORS[item.rarity]}44` : "0 4px 0 rgba(59,74,74,0.08)", transition: "transform 0.08s", position: "relative" }}
               >
                 {item.equipped && (
                   <span style={{ position: "absolute", top: 6, right: 6, fontSize: 10, background: "var(--accent-2)", color: "#fff", fontWeight: 800, padding: "2px 5px", borderRadius: 999 }}>ON</span>

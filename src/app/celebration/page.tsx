@@ -5,9 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { applySession, xpForNextLevel } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
-import { loadUserFromDB, saveUserToDB, saveSessionToDB, rollLoot, getEquippedBonuses, type ItemData } from "@/lib/db";
+import { loadUserFromDB, saveUserToDB, saveSessionToDB, rollLoot, getEquippedBonuses, savePotions, savePerks, type ItemData } from "@/lib/db";
 import { updateChallengeProgress } from "@/lib/challenges";
 import { checkAndGrantAchievements, type AchievementGrant } from "@/lib/achievements";
+import { cacheUser, getCachedUser, queueSession } from "@/lib/offline";
+import { getPotionMultipliers, decrementPotions, type PotionId, type PotionCounts } from "@/lib/potions";
+import { getPerkXpMult, getPerkCoinMult, isPerkLevel, perkSlotsAt, rollPerkChoices, PERKS, type PerkId, type PerkDef } from "@/lib/perks";
 
 const RARITY_COLORS: Record<string, string> = {
   common:    "#9aa6a6",
@@ -72,6 +75,9 @@ function CelebrationContent() {
   const [lootItem, setLootItem] = useState<ItemData | null>(null);
   const [achievementGrants, setAchievementGrants] = useState<AchievementGrant[]>([]);
   const [achIndex, setAchIndex] = useState(0);
+  const [sessionOffline, setSessionOffline] = useState(false);
+  const [perkChoices, setPerkChoices] = useState<PerkDef[] | null>(null);
+  const [showPerkModal, setShowPerkModal] = useState(false);
 
   useEffect(() => {
     if (appliedRef.current) return;
@@ -79,17 +85,59 @@ function CelebrationContent() {
     async function apply() {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) { router.replace("/login"); return; }
-      const userData = await loadUserFromDB(authUser.id);
-      if (!userData) { router.replace("/"); return; }
-      // Load equipped bonuses and add them on top of base rewards
+
+      // Try online path first
+      let userData = await loadUserFromDB(authUser.id);
+
+      // Offline fallback — use cached user data
+      if (!userData) {
+        const cached = getCachedUser(authUser.id);
+        if (!cached) { router.replace("/"); return; }
+
+        const result = applySession(cached, duration, subject);
+        cacheUser(authUser.id, { ...result.updated, onboarded: true });
+        queueSession({
+          userId: authUser.id,
+          subject,
+          durationMin: duration,
+          xpEarned: result.xpEarned,
+          completed: true,
+          createdAt: new Date().toISOString(),
+        });
+        setSessionOffline(true);
+        setXpEarned(result.xpEarned);
+        setCoinsEarned(result.coinsEarned);
+        setLevel(result.updated.level);
+        setXpAfter(result.updated.xp);
+        setXpToNext(xpForNextLevel(result.updated.level));
+        setLeveledUp(result.leveledUp);
+        return;
+      }
+
+      // Online path
       const { xpBonus, coinBonus } = await getEquippedBonuses(authUser.id);
+
+      // Read active potions (chosen on setup screen) and apply multipliers
+      let activePotions: PotionId[] = [];
+      try {
+        const raw = sessionStorage.getItem("ff_active_potions");
+        if (raw) activePotions = JSON.parse(raw) as PotionId[];
+      } catch {}
+      sessionStorage.removeItem("ff_active_potions");
+
+      const potionMul = getPotionMultipliers(activePotions);
+      const userPerks = (userData.perks ?? []) as PerkId[];
+      const perkXpMul = getPerkXpMult(userPerks, duration, userData.level);
+      const perkCoinMul = getPerkCoinMult(userPerks);
+
       const result = applySession(userData, duration, subject);
-      const totalXP    = result.xpEarned    + xpBonus;
-      const totalCoins = result.coinsEarned + coinBonus;
+      const totalXP    = Math.round((result.xpEarned    + xpBonus)   * potionMul.xpMult   * perkXpMul);
+      const totalCoins = Math.round((result.coinsEarned + coinBonus) * potionMul.coinMult * perkCoinMul);
       // Re-apply with bonuses on top (update coins manually since applySession doesn't know bonuses)
       result.updated.xp    = Math.max(0, result.updated.xp    - result.xpEarned    + totalXP);
       result.updated.coins = Math.max(0, result.updated.coins - result.coinsEarned + totalCoins);
       await saveUserToDB(authUser.id, result.updated);
+      cacheUser(authUser.id, { ...result.updated, onboarded: true });
       await saveSessionToDB(authUser.id, subject, duration, totalXP, true);
       await updateChallengeProgress(authUser.id, duration);
       const item = await rollLoot(authUser.id, scenario, duration);
@@ -128,6 +176,19 @@ function CelebrationContent() {
         }
         setAchievementGrants(grants);
       }
+      // Decrement used potions
+      if (activePotions.length > 0) {
+        const nextPotions: PotionCounts = decrementPotions(userData.potions ?? {}, activePotions);
+        await savePotions(authUser.id, nextPotions);
+      }
+
+      // Check for new perk slot (every 10 levels)
+      const ownedPerks = (userData.perks ?? []) as PerkId[];
+      const newSlots = perkSlotsAt(result.updated.level) - ownedPerks.length;
+      if (newSlots > 0 && isPerkLevel(result.updated.level)) {
+        setPerkChoices(rollPerkChoices(ownedPerks));
+      }
+
       setXpEarned(totalXP);
       setCoinsEarned(totalCoins);
       setLevel(result.updated.level);
@@ -137,6 +198,17 @@ function CelebrationContent() {
     }
     apply();
   }, [duration, subject, scenario, router]);
+
+  async function pickPerk(perkId: PerkId) {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+    const userData = await loadUserFromDB(authUser.id);
+    if (!userData) return;
+    const next = [...(userData.perks ?? []), perkId] as PerkId[];
+    await savePerks(authUser.id, next);
+    setShowPerkModal(false);
+    setPerkChoices(null);
+  }
 
   const [displayXP, setDisplayXP] = useState(0);
   const [displayCoins, setDisplayCoins] = useState(0);
@@ -158,6 +230,7 @@ function CelebrationContent() {
         setDisplayXP(xpEarned);
         setDisplayCoins(coinsEarned);
         if (leveledUp) setShowLevelUp(true);
+        else if (perkChoices && perkChoices.length > 0) setShowPerkModal(true);
         else if (lootItem) setShowLoot(true);
         else if (achievementGrants.length > 0) setAchIndex(0);
       }
@@ -186,6 +259,12 @@ function CelebrationContent() {
   return (
     <main className="min-h-screen pb-10" style={{ maxWidth: 480, margin: "0 auto" }}>
       <Confetti />
+
+      {sessionOffline && (
+        <div style={{ background: "#fff3cd", borderBottom: "1px solid #ffc107", padding: "8px 20px", textAlign: "center", fontSize: 12, fontWeight: 700, color: "#856404" }}>
+          📵 Offline — XP je spremljen lokalno, sync pri sljedećem spajanju
+        </div>
+      )}
 
       <header className="flex justify-end px-5 pt-6 pb-2">
         <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "rgba(255,255,255,0.6)", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", textDecoration: "none", color: "var(--ink)", backdropFilter: "blur(8px)" }}>✕</Link>
@@ -263,7 +342,45 @@ function CelebrationContent() {
           <div style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 600, color: "var(--ink)" }}>Level Up!</div>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--accent)", fontWeight: 600 }}>Level {level}</div>
           <p style={{ color: "var(--ink-soft)", fontSize: 13, textAlign: "center", margin: 0 }}>Nastavljaš biti heroj!</p>
-          <button className="ff-btn" style={{ width: "100%" }} onClick={() => { setShowLevelUp(false); if (lootItem) setShowLoot(true); else if (achievementGrants.length > 0) setAchIndex(0); }}>Nastavi 🎉</button>
+          <button className="ff-btn" style={{ width: "100%" }} onClick={() => {
+            setShowLevelUp(false);
+            if (perkChoices && perkChoices.length > 0) setShowPerkModal(true);
+            else if (lootItem) setShowLoot(true);
+            else if (achievementGrants.length > 0) setAchIndex(0);
+          }}>Nastavi 🎉</button>
+        </Modal>
+      )}
+
+      {/* Perk pick modal */}
+      {showPerkModal && perkChoices && (
+        <Modal>
+          <p style={{ fontSize: 12, color: "var(--ink-soft)", fontWeight: 800, margin: 0, textTransform: "uppercase", letterSpacing: 1.2 }}>Novi perk slot!</p>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--accent)" }}>Odaberi perk</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+            {perkChoices.map((p) => (
+              <button
+                key={p.id}
+                onClick={async () => {
+                  await pickPerk(p.id);
+                  if (lootItem) setShowLoot(true);
+                  else if (achievementGrants.length > 0) setAchIndex(0);
+                }}
+                style={{
+                  appearance: "none", border: "1px solid rgba(201,255,74,0.30)",
+                  background: "rgba(201,255,74,0.06)", color: "var(--ink)",
+                  padding: 12, borderRadius: 14, textAlign: "left", cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 12, fontFamily: "var(--font-body)",
+                  fontWeight: 600, fontSize: 14,
+                }}
+              >
+                <span style={{ fontSize: 28 }}>{p.icon}</span>
+                <span style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--accent)" }}>{p.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>{p.description}</div>
+                </span>
+              </button>
+            ))}
+          </div>
         </Modal>
       )}
 

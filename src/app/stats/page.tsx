@@ -23,7 +23,7 @@ function NavBar() {
         { icon: "🏠", label: "Home",  href: "/" },
         { icon: "🏆", label: "Achievements", href: "/stats", active: true },
         { icon: "🛒", label: "Shop",  href: "/shop" },
-        { icon: "🎒", label: "Inv",   href: "/inventory" },
+        { icon: "🎒", label: "Inventory",   href: "/inventory" },
         { icon: "👤", label: "Me",    href: "/me" },
       ].map(({ icon, label, href, active }) => (
         <Link key={label} href={href} className={`ff-nav-item${active ? " active" : ""}`}>

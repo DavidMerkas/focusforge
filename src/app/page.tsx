@@ -5,17 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { xpForNextLevel } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
-import { loadUserFromDB, createUserInDB } from "@/lib/db";
+import { loadUserFromDB, createUserInDB, saveSessionToDB } from "@/lib/db";
 import { getOrCreateChallenges, type Challenge } from "@/lib/challenges";
+import { cacheUser, getCachedUser, getPendingSessions, removePendingSession } from "@/lib/offline";
 
 function NavBar() {
   return (
     <nav className="ff-nav">
       {[
         { icon: "🏠", label: "Home",  href: "/",          active: true  },
-        { icon: "📊", label: "Stats", href: "/stats" },
+        { icon: "🏆", label: "Achievements", href: "/stats" },
         { icon: "🛒", label: "Shop",  href: "/shop" },
-        { icon: "🎒", label: "Inv",   href: "/inventory" },
+        { icon: "🎒", label: "Inventory",   href: "/inventory" },
         { icon: "👤", label: "Me",    href: "/me" },
       ].map(({ icon, label, href, active }) => (
         <Link key={label} href={href} className={`ff-nav-item${active ? " active" : ""}`}>
@@ -34,20 +35,50 @@ export default function Home() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [avatarAnim, setAvatarAnim] = useState("");
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
+    async function syncPending(userId: string) {
+      const pending = getPendingSessions();
+      for (const s of pending) {
+        if (s.userId !== userId) continue;
+        try {
+          await saveSessionToDB(userId, s.subject, s.durationMin, s.xpEarned, s.completed);
+          removePendingSession(s.id);
+        } catch {
+          break; // still offline, stop trying
+        }
+      }
+    }
+
     async function loadData() {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) { router.replace("/login"); return; }
 
       let data = await loadUserFromDB(authUser.id);
+
       if (!data) {
+        // Try offline cache before giving up
+        const cached = getCachedUser(authUser.id);
+        if (cached) {
+          setIsOffline(true);
+          setUser({ heroName: cached.heroName, avatar: cached.avatar ?? "🧙‍♂️", level: cached.level, xp: cached.xp, coins: cached.coins, streak: cached.streak });
+          setXpToNext(xpForNextLevel(cached.level));
+          setLoading(false);
+          return;
+        }
+        // No cache either — new user
         const defaultData = { heroName: "Heroj", avatar: "🧙‍♂️", level: 1, xp: 0, coins: 0, streak: 0, lastSessionDate: null, recentSubjects: [] };
         await createUserInDB(authUser.id, defaultData);
         router.replace("/onboarding");
         return;
       }
       if (!data.onboarded) { router.replace("/onboarding"); return; }
+
+      // Online — cache fresh data and sync any pending sessions
+      cacheUser(authUser.id, data);
+      setIsOffline(false);
+      await syncPending(authUser.id);
 
       setUser({ heroName: data.heroName, avatar: data.avatar ?? "🧙‍♂️", level: data.level, xp: data.xp, coins: data.coins, streak: data.streak });
       setXpToNext(xpForNextLevel(data.level));
@@ -84,6 +115,13 @@ export default function Home() {
   return (
     <main className="min-h-screen pb-28" style={{ maxWidth: 480, margin: "0 auto" }}>
 
+      {/* Offline banner */}
+      {isOffline && (
+        <div style={{ background: "#fff3cd", borderBottom: "1px solid #ffc107", padding: "8px 20px", textAlign: "center", fontSize: 12, fontWeight: 700, color: "#856404" }}>
+          📵 Offline način rada — podaci su učitani iz cache-a
+        </div>
+      )}
+
       {/* Ambient clouds */}
       <div className="ff-cloud" style={{ top: 60, animationDuration: "34s" }} />
       <div className="ff-cloud" style={{ top: 110, animationDuration: "48s", animationDelay: "-14s", transform: "scale(0.7)" }} />
@@ -93,7 +131,7 @@ export default function Home() {
         <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)", display: "flex", alignItems: "center", gap: 8 }}>
           🌿 FocusForge
         </div>
-        <button onClick={handleLogout} style={{ width: 40, height: 40, borderRadius: 14, background: "#fff", border: 0, cursor: "pointer", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", fontSize: 16 }}>
+        <button onClick={handleLogout} style={{ width: 40, height: 40, borderRadius: 14, background: "rgba(255,255,255,0.06)", border: 0, cursor: "pointer", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)", fontSize: 16 }}>
           🚪
         </button>
       </header>

@@ -1,7 +1,14 @@
 import { supabase } from "./supabase";
 import type { UserData } from "./storage";
+import type { PotionCounts, PotionId } from "./potions";
+import type { PerkId } from "./perks";
 
-export type UserDataWithMeta = UserData & { onboarded: boolean; friendCode?: string };
+export type UserDataWithMeta = UserData & {
+  onboarded: boolean;
+  friendCode?: string;
+  potions?: PotionCounts;
+  perks?: PerkId[];
+};
 
 // Load user data from Supabase, returns null if not found
 export async function loadUserFromDB(userId: string): Promise<UserDataWithMeta | null> {
@@ -24,7 +31,29 @@ export async function loadUserFromDB(userId: string): Promise<UserDataWithMeta |
     recentSubjects: data.recent_subjects ?? [],
     onboarded: data.onboarded ?? false,
     friendCode: data.friend_code ?? null,
+    potions: (data.potions ?? {}) as PotionCounts,
+    perks:   (data.perks ?? []) as PerkId[],
   };
+}
+
+// Update only potion counts
+export async function savePotions(userId: string, potions: PotionCounts): Promise<void> {
+  await supabase.from("users").update({ potions }).eq("id", userId);
+}
+
+// Update only perks list
+export async function savePerks(userId: string, perks: PerkId[]): Promise<void> {
+  await supabase.from("users").update({ perks }).eq("id", userId);
+}
+
+// Atomically increment a single potion count after purchase
+export async function buyPotion(userId: string, potionId: PotionId, qty: number = 1): Promise<PotionCounts | null> {
+  const user = await loadUserFromDB(userId);
+  if (!user) return null;
+  const current = user.potions ?? {};
+  const next = { ...current, [potionId]: (current[potionId] ?? 0) + qty };
+  await savePotions(userId, next);
+  return next;
 }
 
 // Create user row in DB for new users

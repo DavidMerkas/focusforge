@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { loadUserFromDB } from "@/lib/db";
+import { ACHIEVEMENTS } from "@/lib/achievements";
+import { PERKS, perkSlotsAt, type PerkId } from "@/lib/perks";
 
 interface Session {
   subject: string;
@@ -48,7 +50,7 @@ function NavBar() {
         { icon: "🏠", label: "Home",  href: "/" },
         { icon: "🏆", label: "Achievements", href: "/stats" },
         { icon: "🛒", label: "Shop",  href: "/shop" },
-        { icon: "🎒", label: "Inv",   href: "/inventory" },
+        { icon: "🎒", label: "Inventory",   href: "/inventory" },
         { icon: "👤", label: "Me",    href: "/me", active: true },
       ].map(({ icon, label, href, active }) => (
         <Link key={label} href={href} className={`ff-nav-item${active ? " active" : ""}`}>
@@ -73,6 +75,8 @@ export default function MePage() {
   const [copied, setCopied] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [myAvatar, setMyAvatar] = useState("🧙‍♂️");
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
+  const [myPerks, setMyPerks] = useState<PerkId[]>([]);
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -90,6 +94,7 @@ export default function MePage() {
     setMyName(userData.heroName);
     setMyLevel(userData.level);
     setMyAvatar(userData.avatar ?? "🧙‍♂️");
+    setMyPerks((userData.perks ?? []) as PerkId[]);
 
     const { data: sessionData } = await supabase
       .from("sessions")
@@ -97,6 +102,12 @@ export default function MePage() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (sessionData) setSessions(sessionData);
+
+    const { data: achData } = await supabase
+      .from("user_achievements")
+      .select("achievement_id")
+      .eq("user_id", user.id);
+    setUnlockedAchievements(new Set((achData ?? []).map((r) => r.achievement_id)));
 
     const { data: friendRows } = await supabase
       .from("friends").select("id, status, user_id, friend_id")
@@ -184,7 +195,7 @@ export default function MePage() {
     <main className="min-h-screen pb-28" style={{ maxWidth: 480, margin: "0 auto" }}>
 
       <header className="flex items-center gap-3 px-5 pt-6 pb-4">
-        <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "#fff", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", fontSize: 18, cursor: "pointer", textDecoration: "none", color: "var(--ink)" }}>←</Link>
+        <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "rgba(255,255,255,0.06)", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)", fontSize: 18, cursor: "pointer", textDecoration: "none", color: "var(--ink)" }}>←</Link>
         <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)" }}>Moj profil 👤</span>
       </header>
 
@@ -205,11 +216,42 @@ export default function MePage() {
                   <span style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 700 }}>Tvoj friend code</span>
                   <button
                     onClick={() => { navigator.clipboard.writeText(myCode); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                    style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 600, letterSpacing: 4, background: "#f6ead1", padding: "10px 20px", borderRadius: 16, border: 0, cursor: "pointer", color: "var(--ink)", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", transition: "transform 0.08s" }}
+                    style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 600, letterSpacing: 4, background: "#f6ead1", padding: "10px 20px", borderRadius: 16, border: 0, cursor: "pointer", color: "var(--ink)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)", transition: "transform 0.08s" }}
                   >{myCode}</button>
                   <span style={{ fontSize: 11, color: copied ? "#4caf50" : "var(--ink-faint)", fontWeight: 700 }}>{copied ? "✅ Kopirano!" : "Klikni za kopiranje"}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Perks */}
+            <div className="ff-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>⚡ Perkovi</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-faint)", letterSpacing: 1 }}>{myPerks.length}/{perkSlotsAt(myLevel)} SLOT</span>
+              </div>
+              {myPerks.length === 0 ? (
+                <p style={{ color: "var(--ink-soft)", fontSize: 12, margin: 0, fontWeight: 600 }}>
+                  {perkSlotsAt(myLevel) > 0
+                    ? "Imaš slobodan slot — završi sesiju da odabereš perk."
+                    : `Sljedeći slot na levelu ${(Math.floor(myLevel / 10) + 1) * 10}.`}
+                </p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {myPerks.map((id) => {
+                    const p = PERKS[id];
+                    if (!p) return null;
+                    return (
+                      <div key={id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 10px", borderRadius: 12, background: "rgba(201,255,74,0.06)", border: "1px solid rgba(201,255,74,0.20)" }}>
+                        <span style={{ fontSize: 22 }}>{p.icon}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 13, color: "var(--accent)" }}>{p.name}</div>
+                          <div style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 600 }}>{p.description}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Add friend */}
@@ -235,7 +277,7 @@ export default function MePage() {
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       <button onClick={() => handleAccept(f.id)} style={{ padding: "8px 14px", background: "var(--accent-2)", border: 0, borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#fff", boxShadow: "0 3px 0 color-mix(in oklab, var(--accent-2), #000 30%)" }}>Prihvati</button>
-                      <button onClick={() => handleRemove(f.id)} style={{ padding: "8px 14px", background: "#fff", border: 0, borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer", color: "var(--ink-soft)", boxShadow: "0 3px 0 rgba(59,74,74,0.08)" }}>Odbij</button>
+                      <button onClick={() => handleRemove(f.id)} style={{ padding: "8px 14px", background: "rgba(255,255,255,0.06)", border: 0, borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer", color: "var(--ink-soft)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)" }}>Odbij</button>
                     </div>
                   </div>
                 ))}
@@ -402,6 +444,34 @@ export default function MePage() {
                 )}
               </>
             )}
+
+            {/* Achievements sažetak */}
+            <div className="ff-card flex flex-col gap-3">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>Achievements 🏆</span>
+                <Link href="/stats" style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", textDecoration: "none" }}>Sve →</Link>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 22, color: "var(--accent)" }}>
+                  {unlockedAchievements.size}/{ACHIEVEMENTS.length}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div className="ff-xpbar">
+                    <div className="ff-xpbar-fill" style={{ width: `${(unlockedAchievements.size / ACHIEVEMENTS.length) * 100}%` }} />
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {ACHIEVEMENTS.map((ach) => {
+                  const done = unlockedAchievements.has(ach.id);
+                  return (
+                    <span key={ach.id} title={ach.title} style={{ fontSize: 24, filter: done ? "none" : "grayscale(1)", opacity: done ? 1 : 0.35 }}>
+                      {ach.icon}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
       </div>

@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { loadUserFromDB, saveUserToDB } from "@/lib/db";
+import { loadUserFromDB, saveUserToDB, buyPotion } from "@/lib/db";
+import { FilterPicker } from "@/components/FilterPicker";
+import { POTION_LIST } from "@/lib/potions";
 
 interface ShopItem {
   id: string; name: string; description: string;
@@ -31,9 +33,9 @@ function NavBar() {
     <nav className="ff-nav">
       {[
         { icon: "🏠", label: "Home",  href: "/" },
-        { icon: "📊", label: "Stats", href: "/stats" },
+        { icon: "🏆", label: "Achievements", href: "/stats" },
         { icon: "🛒", label: "Shop",  href: "/shop", active: true },
-        { icon: "🎒", label: "Inv",   href: "/inventory" },
+        { icon: "🎒", label: "Inventory",   href: "/inventory" },
         { icon: "👤", label: "Me",    href: "/me" },
       ].map(({ icon, label, href, active }) => (
         <Link key={label} href={href} className={`ff-nav-item${active ? " active" : ""}`}>
@@ -94,20 +96,14 @@ export default function ShopPage() {
 
       <header className="flex items-center justify-between px-5 pt-6 pb-4">
         <div className="flex items-center gap-3">
-          <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "#fff", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", fontSize: 18, cursor: "pointer", textDecoration: "none", color: "var(--ink)" }}>←</Link>
+          <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "rgba(255,255,255,0.06)", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)", fontSize: 18, cursor: "pointer", textDecoration: "none", color: "var(--ink)" }}>←</Link>
           <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)" }}>Shop 🛒</span>
         </div>
         <span className="ff-chip" style={{ color: "var(--coin)", fontFamily: "var(--font-display)" }}>🪙 {coins}</span>
       </header>
 
-      {/* Filters */}
-      <div className="px-5 pb-3 flex gap-2 overflow-x-auto">
-        {FILTERS.map(({ id, label, icon }) => (
-          <button key={id} onClick={() => setFilter(id)}
-            style={{ flexShrink: 0, padding: "8px 14px", borderRadius: 999, border: 0, cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "var(--font-body)", background: filter === id ? "var(--accent)" : "#fff", color: filter === id ? "#fff" : "var(--ink-soft)", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", transition: "all 0.15s" }}
-          >{icon} {label}</button>
-        ))}
-      </div>
+      {/* Filter dropdown */}
+      <FilterPicker value={filter} onChange={setFilter} options={FILTERS} />
 
       {/* Feedback */}
       {feedback && (
@@ -120,13 +116,49 @@ export default function ShopPage() {
       )}
 
       <div className="px-5">
+        {/* Potions section */}
+        <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-soft)", letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 10 }}>🧪 Napitci</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 18 }}>
+          {POTION_LIST.map((p) => (
+            <button
+              key={p.id}
+              onClick={async () => {
+                if (coins < p.price) { setFeedback({ msg: "Nemaš dovoljno coinsa! 🪙", ok: false }); return; }
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+                const userData = await loadUserFromDB(user.id);
+                if (!userData) return;
+                await saveUserToDB(user.id, { ...userData, coins: userData.coins - p.price });
+                await buyPotion(user.id, p.id, 1);
+                setCoins(userData.coins - p.price);
+                setFeedback({ msg: `${p.icon} ${p.name} kupljen!`, ok: true });
+              }}
+              style={{
+                background: "rgba(201,255,74,0.04)",
+                border: "1px solid rgba(201,255,74,0.30)",
+                borderRadius: 16, padding: 12,
+                display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4,
+                cursor: "pointer", color: "var(--ink)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                <span style={{ fontSize: 28 }}>{p.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--coin)" }}>🪙 {p.price}</span>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700 }}>{p.name}</span>
+              <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 700 }}>{p.effectLabel}</span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-soft)", letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 10 }}>🎒 Predmeti</div>
         {loading ? (
           <p style={{ color: "var(--ink-soft)", textAlign: "center", marginTop: 40 }}>Učitavanje...</p>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
             {filtered.map((item) => (
               <button key={item.id} onClick={() => { setSelected(item); setFeedback(null); }}
-                style={{ background: "#fff", border: `2px solid ${RARITY_COLORS[item.rarity]}`, borderRadius: 20, padding: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", boxShadow: "0 4px 0 rgba(59,74,74,0.08)", transition: "transform 0.08s" }}
+                style={{ background: "rgba(255,255,255,0.06)", border: `2px solid ${RARITY_COLORS[item.rarity]}`, borderRadius: 20, padding: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)", transition: "transform 0.08s" }}
               >
                 <span style={{ fontSize: 38 }}>{item.icon}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, textAlign: "center", color: "var(--ink)", lineHeight: 1.3 }}>{item.name}</span>

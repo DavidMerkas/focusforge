@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { loadUserFromDB } from "@/lib/db";
+import { POTION_LIST, MAX_POTIONS_PER_SESSION, ownedCount, type PotionCounts, type PotionId } from "@/lib/potions";
 
 const DURATIONS = [15, 25, 45, 90];
 const SCENARIOS = [
@@ -23,6 +24,8 @@ export default function SetupPage() {
   const [recentSubjects, setRecentSubjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [avatar, setAvatar] = useState("🧙‍♂️");
+  const [potions, setPotions] = useState<PotionCounts>({});
+  const [activePotions, setActivePotions] = useState<PotionId[]>([]);
 
   useEffect(() => {
     async function loadRecent() {
@@ -32,10 +35,20 @@ export default function SetupPage() {
       if (userData) {
         setRecentSubjects(userData.recentSubjects);
         setAvatar(userData.avatar ?? "🧙‍♂️");
+        setPotions(userData.potions ?? {});
       }
     }
     loadRecent();
   }, []);
+
+  function togglePotion(id: PotionId) {
+    setActivePotions((prev) => {
+      if (prev.includes(id)) return prev.filter((p) => p !== id);
+      if (prev.length >= MAX_POTIONS_PER_SESSION) return prev;
+      if (ownedCount(potions, id) <= prev.filter((p) => p === id).length) return prev;
+      return [...prev, id];
+    });
+  }
 
   async function handleStart() {
     setLoading(true);
@@ -58,6 +71,9 @@ export default function SetupPage() {
       }
     } catch {}
 
+    // Persist active potions for this session — read by celebration page
+    sessionStorage.setItem("ff_active_potions", JSON.stringify(activePotions));
+
     const params = new URLSearchParams({ duration: String(duration), subject: finalSubject, scenario, questTitle, questDesc, avatar });
     router.push(`/timer?${params.toString()}`);
   }
@@ -66,7 +82,7 @@ export default function SetupPage() {
     <main className="min-h-screen pb-10" style={{ maxWidth: 480, margin: "0 auto" }}>
 
       <header className="flex items-center gap-3 px-5 pt-6 pb-4">
-        <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "#fff", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 0 rgba(59,74,74,0.08)", fontSize: 18, cursor: "pointer", textDecoration: "none" }}>←</Link>
+        <Link href="/" style={{ width: 40, height: 40, borderRadius: 14, background: "rgba(255,255,255,0.06)", border: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)", fontSize: 18, cursor: "pointer", textDecoration: "none" }}>←</Link>
         <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)" }}>Nova sesija</span>
       </header>
 
@@ -128,6 +144,35 @@ export default function SetupPage() {
               <span>{label}</span>
             </button>
           ))}
+        </div>
+
+        {/* Potions */}
+        <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", color: "var(--ink-soft)", letterSpacing: "0.8px", margin: "14px 2px 6px", display: "flex", justifyContent: "space-between" }}>
+          <span>Napitci (max {MAX_POTIONS_PER_SESSION})</span>
+          <span style={{ color: "var(--accent)" }}>{activePotions.length}/{MAX_POTIONS_PER_SESSION}</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+          {POTION_LIST.map((p) => {
+            const have = ownedCount(potions, p.id);
+            const sel = activePotions.includes(p.id);
+            const disabled = have === 0 || (!sel && activePotions.length >= MAX_POTIONS_PER_SESSION);
+            return (
+              <button
+                key={p.id}
+                onClick={() => togglePotion(p.id)}
+                disabled={disabled}
+                className={`ff-pick${sel ? " selected" : ""}`}
+                style={{ opacity: have === 0 ? 0.4 : 1, alignItems: "flex-start", textAlign: "left", padding: 12, gap: 4 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 22 }}>{p.icon}</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--ink-faint)" }}>×{have}</span>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700 }}>{p.name}</span>
+                <span style={{ fontSize: 10, color: sel ? "var(--accent)" : "var(--ink-soft)", fontWeight: 700 }}>{p.effectLabel}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div style={{ height: 20 }} />

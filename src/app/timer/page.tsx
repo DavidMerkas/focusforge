@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Diorama, type Scenario, type Variant } from "@/components/Dioramas";
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -14,10 +15,10 @@ const SCENARIO_ICONS: Record<string, string> = {
 };
 
 const SCENARIO_BG: Record<string, string> = {
-  dungeon: "linear-gradient(180deg, #2d1b4e, #4a2060)",
-  garden:  "linear-gradient(180deg, #c8f0d0, #e8f8c0)",
-  space:   "linear-gradient(180deg, #0a0a2e, #1a1a5e)",
-  chaos:   "linear-gradient(180deg, #ff6b9d, #ffa07a)",
+  dungeon: "radial-gradient(ellipse at top, #2a1844 0%, #0d0c20 60%, #06051a 100%)",
+  garden:  "radial-gradient(ellipse at top, #0a2630 0%, #0d0c20 60%, #06051a 100%)",
+  space:   "radial-gradient(ellipse at top, #1a2880 0%, #0a1248 60%, #050828 100%)",
+  chaos:   "radial-gradient(ellipse at top, #28084a 0%, #1a0540 60%, #06051a 100%)",
 };
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 115; // r=115
@@ -32,6 +33,8 @@ function TimerContent() {
   const questTitle = params.get("questTitle") ?? "Fokus sesija";
   const questDesc  = params.get("questDesc") ?? "";
   const avatar     = params.get("avatar") ?? "🧙‍♂️";
+  const variantRaw = Number(params.get("variant") ?? 1);
+  const variant: Variant = (variantRaw === 2 || variantRaw === 3 ? variantRaw : 1) as Variant;
 
   const totalSeconds = duration * 60;
   const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
@@ -90,7 +93,7 @@ function TimerContent() {
   const ringOffset = RING_CIRCUMFERENCE * progress;
   const scenarioIcon = SCENARIO_ICONS[scenario] ?? "⚔️";
   const scenarioBg = SCENARIO_BG[scenario] ?? SCENARIO_BG.dungeon;
-  const isDark = scenario === "dungeon" || scenario === "space";
+  const isDark = true; // Neon = always dark
 
   // ── Quest splash ─────────────────────────────────────────────
   if (showSplash) {
@@ -103,6 +106,9 @@ function TimerContent() {
         )}
         <button className="ff-btn" onClick={() => { setShowSplash(false); setIsRunning(true); }} style={{ fontSize: 18 }}>
           Kreni! ⚔️
+        </button>
+        <button onClick={() => { setShowSplash(false); setIsRunning(true); }} style={{ background: "none", border: 0, cursor: "pointer", fontSize: 13, fontWeight: 700, color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)", textDecoration: "underline" }}>
+          Preskoči priču
         </button>
       </main>
     );
@@ -143,11 +149,11 @@ function TimerContent() {
             <circle cx="130" cy="130" r="115" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="16" />
             <circle
               cx="130" cy="130" r="115" fill="none"
-              stroke={isDark ? "#ff9b7a" : "var(--accent)"}
-              strokeWidth="16" strokeLinecap="round"
+              stroke="var(--accent)"
+              strokeWidth="14" strokeLinecap="round"
               strokeDasharray={RING_CIRCUMFERENCE}
               strokeDashoffset={ringOffset}
-              style={{ transition: "stroke-dashoffset 1s linear", filter: "drop-shadow(0 4px 8px rgba(255,155,122,0.4))" }}
+              style={{ transition: "stroke-dashoffset 1s linear", filter: "drop-shadow(0 0 10px rgba(201,255,74,0.7))" }}
             />
           </svg>
           <div style={{ textAlign: "center" }}>
@@ -160,35 +166,10 @@ function TimerContent() {
           </div>
         </div>
 
-        {/* Avatar — animacija ovisi o scenariju */}
-        <div className="flex flex-col items-center gap-1">
-          <div style={{ position: "relative", width: 100, height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span
-              className={
-                scenario === "dungeon" ? "animate-dungeon" :
-                scenario === "garden"  ? "animate-garden"  :
-                scenario === "space"   ? "animate-space"   :
-                scenario === "chaos"   ? "animate-chaos"   :
-                "animate-breathe"
-              }
-              style={{ fontSize: 64, filter: "drop-shadow(0 6px 8px rgba(0,0,0,0.2))", display: "inline-block" }}
-            >
-              {avatar}
-            </span>
-
-            {/* Floating prop pored lika */}
-            {scenario === "dungeon" && (
-              <span className="animate-prop-sword" style={{ position: "absolute", right: 6, top: 8, fontSize: 28, transformOrigin: "center" }}>⚔️</span>
-            )}
-            {scenario === "garden" && (
-              <span className="animate-prop-drop" style={{ position: "absolute", right: 14, top: -2, fontSize: 22 }}>💧</span>
-            )}
-            {scenario === "space" && (
-              <span className="animate-prop-star" style={{ position: "absolute", right: 4, top: 4, fontSize: 22 }}>⭐</span>
-            )}
-            {scenario === "chaos" && (
-              <span className="animate-prop-chaos" style={{ position: "absolute", left: "50%", top: "50%", marginLeft: -12, marginTop: -12, fontSize: 22 }}>💥</span>
-            )}
+        {/* Diorama — animirana scena ovisi o scenariju i varijanti */}
+        <div className="flex flex-col items-center gap-2" style={{ width: "100%", padding: "0 20px" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: 300, aspectRatio: "300 / 200", borderRadius: 22, overflow: "hidden", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 12px 40px rgba(0,0,0,0.35)" }}>
+            <Diorama scenario={scenario as Scenario} variant={variant} progress={progress} avatar={avatar} />
           </div>
           <div style={{ fontSize: 11, fontWeight: 800, color: isDark ? "rgba(255,255,255,0.5)" : "var(--ink-faint)", textTransform: "uppercase", letterSpacing: "0.8px" }}>U FOKUSU {scenarioIcon}</div>
         </div>

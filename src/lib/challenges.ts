@@ -37,10 +37,24 @@ export async function getOrCreateChallenges(userId: string): Promise<Challenge[]
     return existing.map(mapChallenge);
   }
 
-  // Generate 2 new challenges for this week
+  // Pick 2 random challenges from the pool (one per type so they don't overlap)
+  const minuteOptions = [
+    { target: 45,  reward_xp: 150, reward_coins: 15 },
+    { target: 60,  reward_xp: 200, reward_coins: 20 },
+    { target: 90,  reward_xp: 250, reward_coins: 25 },
+    { target: 120, reward_xp: 300, reward_coins: 30 },
+  ];
+  const sessionOptions = [
+    { target: 2, reward_xp: 100, reward_coins: 10 },
+    { target: 3, reward_xp: 150, reward_coins: 15 },
+    { target: 5, reward_xp: 200, reward_coins: 20 },
+  ];
+  const m = minuteOptions[Math.floor(Math.random() * minuteOptions.length)];
+  const s = sessionOptions[Math.floor(Math.random() * sessionOptions.length)];
+
   const challenges = [
-    { user_id: userId, week_start: weekStart, type: "total_minutes", target: 60,  reward_xp: 200, reward_coins: 20 },
-    { user_id: userId, week_start: weekStart, type: "session_count", target: 3,   reward_xp: 150, reward_coins: 15 },
+    { user_id: userId, week_start: weekStart, type: "total_minutes", target: m.target, reward_xp: m.reward_xp, reward_coins: m.reward_coins },
+    { user_id: userId, week_start: weekStart, type: "session_count", target: s.target, reward_xp: s.reward_xp, reward_coins: s.reward_coins },
   ];
 
   const { data: created } = await supabase

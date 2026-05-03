@@ -85,7 +85,7 @@
 
 ### Polish
 - [x] Dark mode kao default
-- [ ] Light mode toggle u settings (basic)
+- [x] Light mode toggle u settings (basic)
 - [x] Responsive na mobitelu (test na Chrome DevTools)
 - [x] Page title: "FocusForge"
 - [x] Favicon (emoji ili basic ikona)
@@ -110,19 +110,19 @@
 - [ ] Google OAuth login
 - [x] Email/Password login
 - [x] Login/Register screen
-- [ ] Onboarding flow (prvi put: ime lika, odabir avatara)
+- [x] Onboarding flow (prvi put: ime lika, odabir avatara)
 - [x] Logout opcija u settings
 
 ### Baza
 - [x] Kreirati `users` tablicu (level, xp, coins, streak, preferences)
 - [x] Kreirati `sessions` tablicu (subject, duration, xp_earned, completed)
-- [ ] Migracija localStorage → Supabase (za postojeće korisnike)
+- [x] Migracija localStorage → Supabase (nije potrebna — app uvijek koristio auth)
 - [x] RLS (Row Level Security) na svim tablicama
 
 ### Sync
 - [x] Save sesija u bazu nakon completion
 - [x] Load user data iz baze pri startu
-- [ ] Offline fallback: localStorage ako nema neta, sync kad dođe
+- [x] Offline fallback: localStorage ako nema neta, sync kad dođe
 
 ---
 
@@ -189,10 +189,10 @@
 - [ ] "Nemaš dovoljno coinsa" feedback
 
 ### Potion sustav
-- [ ] Potion slot na setup screenu (max 2)
-- [ ] XP Boost, Coin Boost, Loot Boost, Streak Freeze
-- [ ] Potion efekt primjena na sesiju
-- [ ] Potrošnja nakon sesije
+- [x] Potion slot na setup screenu (max 2)
+- [x] XP Boost, Coin Boost, Loot Boost, Streak Freeze
+- [x] Potion efekt primjena na sesiju
+- [x] Potrošnja nakon sesije
 
 ---
 
@@ -208,11 +208,11 @@
 - [ ] Najbolji dan ("Rekord: 3h 45min u utorak")
 
 ### Passive Perks
-- [ ] Perk unlock svaki 10. level
-- [ ] Perk selection screen (biraj 1 od 3)
-- [ ] 10-15 perkova dizajnirano i balansirano
-- [ ] Perk efekti implementirani (XP/coin bonusi)
-- [ ] Perkovi vidljivi na profilu (👤 Me tab)
+- [x] Perk unlock svaki 10. level
+- [x] Perk selection screen (biraj 1 od 3)
+- [x] 10-15 perkova dizajnirano i balansirano
+- [x] Perk efekti implementirani (XP/coin bonusi)
+- [x] Perkovi vidljivi na profilu (👤 Me tab)
 
 ### Weekly Challenges
 - [ ] Auto-generirani svakog ponedjeljka
